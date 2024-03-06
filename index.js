@@ -18,9 +18,8 @@ class holesailClient {
             return libNet.connPiper(c, () => {
                 const stream = this.dht.connect(Buffer.from(this.peerKey, 'hex'), {reusableSocket: true})
                 stream.setKeepAlive(5000)
-
                 return stream
-            }, {compress: true},this.stats)
+            }, {compress: false},this.stats)
         })
 
         const targetHost = address || '127.0.0.1'
@@ -36,9 +35,4 @@ class holesailClient {
     }
 } //end client class
 
-let test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f")
-test.connect(5000, "127.0.0.1")
-
-goodbye(async () => {
-    await test.destroy()
-})
+module.exports = holesailClient
