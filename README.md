@@ -24,10 +24,12 @@ Then, create a new instance of the `holesailClient` class:
 const test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f");
 ```
 
-You can connect to the DHT network by calling the `connect` method:
+You can connect to [holesail-server](https://github.com/holesail/holesail-server/) network by calling the `connect` method:
 
 ```javascript
-test.connect(5000, "127.0.0.1");
+test.connect(5000, "127.0.0.1", () => {
+    console.log("Listening on 127.0.0.1:5000")
+});
 ```
 
 Once you're done using the client, you can destroy the connection to the DHT network by calling the `destroy` method:

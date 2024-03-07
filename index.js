@@ -13,7 +13,7 @@ class holesailClient {
         this.dht = new HyperDHT()
     }
 
-    connect(port, address) {
+    connect(port, address, callback) {
         const proxy = net.createServer({allowHalfOpen: true}, c => {
             return libNet.connPiper(c, () => {
                 const stream = this.dht.connect(Buffer.from(this.peerKey, 'hex'), {reusableSocket: true})
@@ -25,7 +25,10 @@ class holesailClient {
         const targetHost = address || '127.0.0.1'
         proxy.listen(+port, targetHost, () => {
             const {address, port} = proxy.address()
-            console.log(`Server ready @${address}:${port}`)
+            if (typeof callback === 'function'){
+                callback()
+            }
+            //do anything you want after starting to listen on the peer seed
         })
 
     } //end connect
@@ -36,3 +39,6 @@ class holesailClient {
 } //end client class
 
 module.exports = holesailClient
+
+//TODO: Compresession
+//TODO: Secure connection with Pairing key only
