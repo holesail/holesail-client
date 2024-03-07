@@ -1,8 +1,8 @@
 const holesailClient = require("./index.js")
 const goodbye = require('graceful-goodbye')
 
-let test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f")
-test.connect(5000, "127.0.0.1", () => {
+let test = new holesailClient("0a4dc87104bd424cdfbd1e36586b3a73b970347c241bcdbfa7a581bd1fb7e72b")
+test.connect(8000, "127.0.0.1", () => {
         console.log("Connect to this shite lol")
     }
 )
