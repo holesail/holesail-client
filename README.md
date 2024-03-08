@@ -1,4 +1,5 @@
  # Holesail Client
+[Join our Discord Support Server](https://discord.gg/TQVacE7Vnj)
 
 This is a simple Node.js module that provides a complementary client for the Holesail-server and HyperDHT based servers. The module allows you to connect to the DHT network and send/receive data from other peers.
 
