@@ -1,6 +1,6 @@
 {
   "name": "holesail-client",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A Holepunch based client to connect to holesail-server and other HyperDHT servers",
   "main": "index.js",
   "scripts": {
