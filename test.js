@@ -1,12 +1,12 @@
 const holesailClient = require("./index.js")
 const goodbye = require('graceful-goodbye')
 
-let test = new holesailClient("0a4dc87104bd424cdfbd1e36586b3a73b970347c241bcdbfa7a581bd1fb7e72b")
+let test = new holesailClient("d8afd2605893ba587ffdc60044aa51ede164dbb71219d807ef55d624d8d09241")
 test.connect(8000, "127.0.0.1", () => {
-        console.log("Connect to this shite lol")
+        console.log("Connected")
     }
 )
 
-goodbye(async () => {
-    await test.destroy()
-})
+// goodbye(async () => {
+//     await test.destroy()
+// })
