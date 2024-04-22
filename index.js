@@ -23,7 +23,7 @@ class holesailClient {
         })
 
         const targetHost = options.address || '127.0.0.1'
-        this.proxy.listen(+options.port, targetHost, () => {
+        this.proxy.listen(options.port, targetHost, () => {
             if (typeof callback === 'function'){
                 callback()
             }
