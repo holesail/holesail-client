@@ -28,7 +28,7 @@ const test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b
 You can connect to [holesail-server](https://github.com/holesail/holesail-server/) network by calling the `connect` method:
 
 ```javascript
-test.connect(5000, "127.0.0.1", () => {
+test.connect({port:5000, address:"127.0.0.1"}, () => {
     console.log("Listening on 127.0.0.1:5000")
 });
 ```
@@ -45,25 +45,29 @@ Here's a simple example of how to use the Holesail Client module:
 
 ```javascript
 const holesailClient = require('holesail-client');
-const goodbye = require('graceful-goodbye');
-
 let test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f");
-test.connect(5000, "127.0.0.1");
 
-goodbye(async () => {
-    await test.destroy();
-});
+test.connect({port:8000, address:"127.0.0.1"}, () => {
+        console.log("Connected")
+    }
+)
+
+setTimeout(() => {
+    console.log(test.destroy())
+}, 5000);
+
 ```
 
 ## API
 
-### `holesailClient(key)`
+### `new holesailClient(key)`
 
 Create a new instance of the `holesailClient` class. The `key` parameter is a hexadecimal string representing the peer's key.
 
-### `connect(port, address)`
+### `connect(options,callback)`
 
 Connect to the DHT network. The `port` parameter is the port number to connect to, and the `address` parameter is the IP address of the target host.
+#### options: {port:PORT, address:"address"}
 
 ### `destroy()`
 

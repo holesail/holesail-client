@@ -2,7 +2,6 @@
 const HyperDHT = require('hyperdht')  // HyperDHT module for DHT functionality
 const net = require('net')  // Node.js net module for creating network clients and servers
 const libNet = require('@holesail/hyper-cmd-lib-net')  // Custom network library
-const goodbye = require('graceful-goodbye')  // Graceful shutdown library
 const libKeys = require('hyper-cmd-lib-keys') // To generate a random preSeed for server seed.
 
 class holesailClient {
@@ -11,10 +10,11 @@ class holesailClient {
         this.peerKey = key;
         this.stats = {}
         this.dht = new HyperDHT()
+        this.proxy
     }
 
-    connect(port, address, callback) {
-        const proxy = net.createServer({allowHalfOpen: true}, c => {
+    connect(options, callback) {
+         this.proxy = net.createServer({allowHalfOpen: true}, c => {
             return libNet.connPiper(c, () => {
                 const stream = this.dht.connect(Buffer.from(this.peerKey, 'hex'), {reusableSocket: true})
                 stream.setKeepAlive(5000)
@@ -22,9 +22,8 @@ class holesailClient {
             }, {compress: false},this.stats)
         })
 
-        const targetHost = address || '127.0.0.1'
-        proxy.listen(+port, targetHost, () => {
-            const {address, port} = proxy.address()
+        const targetHost = options.address || '127.0.0.1'
+        this.proxy.listen(+options.port, targetHost, () => {
             if (typeof callback === 'function'){
                 callback()
             }
@@ -35,6 +34,8 @@ class holesailClient {
 
     destroy() {
         this.dht.destroy()
+        this.proxy.close()
+        return 0
     }
 } //end client class
 
