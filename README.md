@@ -1,7 +1,8 @@
  # Holesail Client
 [Join our Discord Support Server](https://discord.gg/TQVacE7Vnj)
 
-This is a simple Node.js module that provides a complementary client for the Holesail-server and HyperDHT based servers. The module allows you to connect to the DHT network and send/receive data from other peers.
+Connect to other peers running holesail-server. This client can connect to servers and relay the data on your system locally. It is supposed to be used as a Node.js module.
+
 
 ## Installation
 
@@ -24,6 +25,10 @@ Then, create a new instance of the `holesailClient` class:
 ```javascript
 const test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f");
 ```
+**If you are connecting securely you need to pass the "secure" flag [Optional but recommended]**
+```javascript
+const test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f","secure");
+```
 
 You can connect to [holesail-server](https://github.com/holesail/holesail-server/) network by calling the `connect` method:
 
@@ -32,6 +37,7 @@ test.connect({port:5000, address:"127.0.0.1"}, () => {
     console.log("Listening on 127.0.0.1:5000")
 });
 ```
+
 
 Once you're done using the client, you can destroy the connection to the DHT network by calling the `destroy` method:
 
@@ -63,6 +69,11 @@ setTimeout(() => {
 ### `new holesailClient(key)`
 
 Create a new instance of the `holesailClient` class. The `key` parameter is a hexadecimal string representing the peer's key.
+
+For connecting securely you should pass a secure parameter, the server also needs to be running securely:
+```angular2html
+new holesailClient(key,"secure")
+```
 
 ### `connect(options,callback)`
 
