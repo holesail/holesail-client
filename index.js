@@ -1,6 +1,13 @@
 // Importing required modules
 const HyperDHT = require('hyperdht')  // HyperDHT module for DHT functionality
-const net = require('net')  // Node.js net module for creating network clients and servers
+
+let net;
+if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+   net = require('net'); // Node.js net module for creating network clients and servers
+} else {
+   net = require('bare-net'); // Required for non-Node.js environments
+}
+
 const libNet = require('@holesail/hyper-cmd-lib-net')  // Custom network library
 const libKeys = require('hyper-cmd-lib-keys') // To generate a random preSeed for server seed.
 const b4a = require('b4a')
