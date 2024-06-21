@@ -5,7 +5,7 @@ let net;
 if (typeof process !== 'undefined' && process.versions && process.versions.node) {
    net = require('net'); // Node.js net module for creating network clients and servers
 } else {
-   net = require('bare-net'); // Required for non-Node.js environments
+   net = require('bare-tcp'); // Required for non-Node.js environments
 }
 
 const libNet = require('@holesail/hyper-cmd-lib-net')  // Custom network library
@@ -17,7 +17,6 @@ class holesailClient {
     constructor(key, secure) {
         //check if secure flag is enabled
         if (secure === "secure") {
-            console.log("Secure flag");
             this.secure = true;
             this.peerKey = HyperDHT.keyPair(b4a.from(key, 'hex'));
             this.dht = new HyperDHT({keyPair: this.peerKey})
