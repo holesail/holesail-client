@@ -1,3 +1,5 @@
+v1.1.4
+-- FIx loading bare-net module
 v1.1.3
 -- Bumped HyperDHT
 v1.1.2
