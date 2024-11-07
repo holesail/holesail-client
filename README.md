@@ -78,7 +78,11 @@ new holesailClient(key,"secure")
 ### `connect(options,callback)`
 
 Connect to the DHT network. The `port` parameter is the port number to connect to, and the `address` parameter is the IP address of the target host.
-#### options: {port:PORT, address:"address"}
+
+### options
+- port:number
+- address: The local address
+- udp: (boolean) (optional)
 
 ### `destroy()`
 

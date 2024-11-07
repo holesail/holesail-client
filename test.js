@@ -1,16 +1,15 @@
-const holesailClient = require("./index.js")
+const holesailClient = require('./index.js')
 
-// let test = new holesailClient("af0449c11fa4b3c7d5f1c058bdaaa5a27bdd38c3ea807c05109fc4ba735b9186","secure")
-// test.connect({port:8000, address:"127.0.0.1"}, () => {
-//         console.log("Connected Privately")
-//     }
-// )
-// setTimeout(() => {
-//     console.log(test.destroy())
-// }, 5000);
+const test1 = new holesailClient('56ccc1e74c1581eb5caecb23aed852089700f43f33820c32de5e48255d7bc7e1')
+test1.connect({ port: 6000, address: '127.0.0.1', udp: true }, () => {
+  console.log('Connected UDP')
+  console.log('Running on 127.0.0.1:6000')
+}
+)
 
-let test2 = new holesailClient("75ad4bc329c1e2bbe4c342617d91589f5ce88ead347e483e5e07e2b2d0d5626d")
-test2.connect({port:9000, address:"127.0.0.1"}, () => {
-        console.log("Connected Publicly")
-    }
+const test2 = new holesailClient('2ecf6f05f929725dace73f99d230caa07235bc140fd0c875b0a92c6b2fbddbee')
+test2.connect({ port: 5000, address: '127.0.0.1', udp: false }, () => {
+  console.log('Connected TCP')
+  console.log('Running on 127.0.0.1:5000')
+}
 )
