@@ -1,3 +1,5 @@
+v1.1.5
+-- Added UDP support
 v1.1.4
 -- Fix loading bare-net module
 v1.1.3
