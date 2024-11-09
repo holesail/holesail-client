@@ -1,3 +1,5 @@
+v1.1.6
+-- Fix bug in secure connection strings
 v1.1.5
 -- Added UDP support
 v1.1.4

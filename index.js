@@ -14,7 +14,7 @@ class holesailClient {
     // check if secure flag is enabled
     if (secure === 'secure') {
       this.secure = true
-      this.peerKey = HyperDHT.keyPair(b4a.from(key, 'hex')).publicKey
+      this.peerKey = HyperDHT.keyPair(b4a.from(key, 'hex'))
       this.dht = new HyperDHT({ keyPair: this.peerKey })
     } else {
       this.peerKey = key
@@ -37,8 +37,12 @@ class holesailClient {
   handleTCP (options, callback) {
     this.proxy = net.createServer({ allowHalfOpen: true }, c => {
       return libNet.connPiper(c, () => {
-        const stream = this.dht.connect(Buffer.from(this.peerKey, 'hex'), { reusableSocket: true })
-        // stream.setKeepAlive(5000)
+        let stream
+        if (this.secure) {
+          stream = this.dht.connect(Buffer.from(this.peerKey.publicKey, 'hex'), { reusableSocket: true })
+        } else {
+          stream = this.dht.connect(Buffer.from(this.peerKey, 'hex'), { reusableSocket: true })
+        } // stream.setKeepAlive(5000)
         return stream
       }, { compress: false }, this.stats)
     })
@@ -54,7 +58,14 @@ class holesailClient {
 
   // Handle UDP connections
   async handleUDP (options, callback) {
-    const conn = await this.dht.connect(this.peerKey)
+    let conn
+
+    if (this.secure) {
+      conn = this.dht.connect(Buffer.from(this.peerKey.publicKey, 'hex'))
+    } else {
+      conn = this.dht.connect(Buffer.from(this.peerKey, 'hex'))
+    }
+
     const server = udp.createSocket('udp4')
 
     conn.once('open', function () {
