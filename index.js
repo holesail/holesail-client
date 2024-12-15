@@ -2,11 +2,7 @@
 const HyperDHT = require('hyperdht') // HyperDHT module for DHT functionality
 const net = require('net') // Net module for creating network clients and servers
 
-const UDX = require('udx-native') // required for UDP
-const udp = new UDX()
-
 const libNet = require('@holesail/hyper-cmd-lib-net') // Custom network library
-const libKeys = require('hyper-cmd-lib-keys') // To generate a random preSeed for server seed.
 const b4a = require('b4a')
 
 class holesailClient {
@@ -35,16 +31,26 @@ class holesailClient {
 
   // Handle TCP connections
   handleTCP (options, callback) {
-    this.proxy = net.createServer({ allowHalfOpen: true }, c => {
-      return libNet.connPiper(c, () => {
-        let stream
-        if (this.secure) {
-          stream = this.dht.connect(Buffer.from(this.peerKey.publicKey, 'hex'), { reusableSocket: true })
-        } else {
-          stream = this.dht.connect(Buffer.from(this.peerKey, 'hex'), { reusableSocket: true })
-        } // stream.setKeepAlive(5000)
-        return stream
-      }, { compress: false }, this.stats)
+    this.proxy = net.createServer({ allowHalfOpen: true }, (c) => {
+      return libNet.connPiper(
+        c,
+        () => {
+          let stream
+          if (this.secure) {
+            stream = this.dht.connect(
+              Buffer.from(this.peerKey.publicKey, 'hex'),
+              { reusableSocket: true }
+            )
+          } else {
+            stream = this.dht.connect(Buffer.from(this.peerKey, 'hex'), {
+              reusableSocket: true
+            })
+          }
+          return stream
+        },
+        { compress: false },
+        this.stats
+      )
     })
 
     const targetHost = options.address || '127.0.0.1'
@@ -52,12 +58,11 @@ class holesailClient {
       if (typeof callback === 'function') {
         callback()
       }
-      // do anything you want after starting to listen on the peer seed
     })
   }
 
   // Handle UDP connections
-  async handleUDP (options, callback) {
+  handleUDP (options, callback) {
     let conn
 
     if (this.secure) {
@@ -66,11 +71,13 @@ class holesailClient {
       conn = this.dht.connect(Buffer.from(this.peerKey, 'hex'))
     }
 
-    const server = udp.createSocket('udp4')
-
     conn.once('open', function () {
-      conn.on('message', (buf) => {
-        server.send(buf, options.port)
+      const handleUDP = libNet.udpPiper(conn, () => {
+        return libNet.udpConnect({
+          port: options.port || 8989,
+          host: options.address || '127.0.0.1',
+          bind: true
+        })
       })
 
       if (typeof callback === 'function') {
