@@ -1,93 +1,134 @@
- # Holesail Client
+
+# Holesail Client
+
 [Join our Discord Support Server](https://discord.gg/TQVacE7Vnj)
 
-Connect to other peers running holesail-server. This client can connect to servers and relay the data on your system locally. It is supposed to be used as a Node.js module.
+The Holesail Client is a Node.js and Bare module for connecting to Holesail Servers with secure and efficient data relaying.
 
+----------
 
 ## Installation
 
-To install the Holesail Client module, use npm:
+Install the Holesail Client module via npm:
 
-```
+```bash
 npm install holesail-client
 ```
 
+----------
+
 ## Usage
 
-To use the Holesail Client module, first require the module in your code:
+### Importing the Module
+
+To use the module, require it in your project:
 
 ```javascript
-const holesailClient = require('holesail-client');
+const HolesailClient = require('holesail-client');
 ```
 
-Then, create a new instance of the `holesailClient` class:
+### Creating an Instance
+
+Create a new instance of the `HolesailClient` class by passing your peer key:
 
 ```javascript
-const test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f");
-```
-**If you are connecting securely you need to pass the "secure" flag [Optional but recommended]**
-```javascript
-const test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f","secure");
+const client = new HolesailClient(key);
 ```
 
-You can connect to [holesail-server](https://github.com/holesail/holesail-server/) network by calling the `connect` method:
+#### Secure Mode
+
+To establish a private connection, pass the optional "secure" flag. Ensure the server is also configured for secure mode:
 
 ```javascript
-test.connect({port:5000, address:"127.0.0.1"}, () => {
-    console.log("Listening on 127.0.0.1:5000")
+const client = new HolesailClient(key, "secure");
+```
+
+### Connecting to the Server
+
+Use the `connect` method to establish a connection to the Holesail Server:
+
+```javascript
+client.connect({ port: 5000, address: "127.0.0.1" }, () => {
+    console.log("Connected to 127.0.0.1:5000");
 });
 ```
 
+### Destroying the Connection
 
-Once you're done using the client, you can destroy the connection to the DHT network by calling the `destroy` method:
+To terminate the connection and clean up resources, call the `destroy` method:
 
 ```javascript
-test.destroy();
+client.destroy();
 ```
+
+----------
 
 ## Example
 
-Here's a simple example of how to use the Holesail Client module:
+Here is a complete example demonstrating how to use the Holesail Client:
 
 ```javascript
-const holesailClient = require('holesail-client');
-let test = new holesailClient("ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f");
+const HolesailClient = require('holesail-client');
 
-test.connect({port:8000, address:"127.0.0.1"}, () => {
-        console.log("Connected")
-    }
-)
+// Replace with your peer key
+const key = "ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f";
+
+const client = new HolesailClient(key);
+
+client.connect({ port: 8000, address: "127.0.0.1" }, () => {
+    console.log("Connected to the server");
+});
 
 setTimeout(() => {
-    console.log(test.destroy())
+    console.log("Closing connection...");
+    client.destroy();
 }, 5000);
 
 ```
 
-## API
+----------
 
-### `new holesailClient(key)`
+## API Reference
 
-Create a new instance of the `holesailClient` class. The `key` parameter is a hexadecimal string representing the peer's key.
+### `new HolesailClient(key, [secure])`
 
-For connecting securely you should pass a secure parameter, the server also needs to be running securely:
-```angular2html
-new holesailClient(key,"secure")
-```
+Creates a new instance of the `HolesailClient` class.
 
-### `connect(options,callback)`
+#### Parameters:
 
-Connect to the DHT network. The `port` parameter is the port number to connect to, and the `address` parameter is the IP address of the target host.
+-   `key` (string): A hexadecimal string representing your peer key.
+-   `secure` (optional, string): Pass "secure" to enable private connections. The server must also be running in secure mode. [See private vs public mode](https://docs.holesail.io/terminology/private-vs-public-connection-string)
 
-### options
-- port:number
-- address: The local address
-- udp: (boolean) (optional)
+----------
+
+### `connect(options, callback)`
+
+Establishes a connection to a Holesail Server.
+
+#### Parameters:
+
+-   `options` (object): Connection options:
+    -   `port` (number): Port number of the server.
+    -   `address` (string): IP address of the server (default: "127.0.0.1").
+    -   `udp` (boolean, optional): Set to `true` for UDP connections.
+-   `callback` (function): A function called once the connection is successfully established.
+
+----------
 
 ### `destroy()`
 
-Destroy the connection to the DHT network.
+Terminates the connection and releases associated resources.
+
+----------
 
 ## License
 
-This module is released under the GPL-v3 License. See the [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) file for more information.
+Holesail Client is released under the [GPL-v3 License](https://www.gnu.org/licenses/gpl-3.0.en.html).
+
+For more details, see the [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) file.
+
+----------
+
+## Community and Support
+
+Join our [Discord Support Server](https://discord.gg/TQVacE7Vnj) for help, discussions, and updates.
