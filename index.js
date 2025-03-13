@@ -1,96 +1,146 @@
 // Importing required modules
-const HyperDHT = require("hyperdht"); // HyperDHT module for DHT functionality
-const net = require("net"); // Net module for creating network clients and servers
+const HyperDHT = require('hyperdht') // HyperDHT module for DHT functionality
+const net = require('net') // Net module for creating network clients and servers
 
-const libNet = require("@holesail/hyper-cmd-lib-net"); // Custom network library
-const b4a = require("b4a");
+const libNet = require('@holesail/hyper-cmd-lib-net') // Custom network library
+const b4a = require('b4a')
 
-class holesailClient {
-  constructor(key, secure) {
+class HolesailClient {
+  constructor (opts) {
     // check if secure flag is enabled
-    if (secure === "secure") {
-      this.secure = true;
-      this.peerKey = HyperDHT.keyPair(b4a.from(key, "hex"));
-      this.dht = new HyperDHT({ keyPair: this.peerKey });
+    this.seed = opts.key
+    let key
+    if (opts.secure) {
+      this.secure = true
+      this.keyPair = HyperDHT.keyPair(b4a.from(this.seed, 'hex'))
+      key = this.keyPair
+      this.publicKey = this.keyPair.publicKey
     } else {
-      this.peerKey = key;
-      this.dht = new HyperDHT();
+      this.secure = false
     }
-
-    this.stats = {};
-    this.proxy;
+    console.log(this.publicKey)
+    this.dht = new HyperDHT({ keyPair: key })
+    this.stats = {}
   }
 
-  connect(options, callback) {
-    if (!options.udp) {
-      this.handleTCP(options, callback);
+  async connect (options, callback) {
+    this.args = options
+    let key
+
+    if (this.secure) {
+      key = Buffer.from(this.publicKey, 'hex')
     } else {
-      this.handleUDP(options, callback);
+      key = Buffer.from(this.seed, 'hex')
     }
+
+    const { value } = await this.get({ latest: true })
+
+    const protocol = JSON.parse(value).protocol
+
+    if (protocol === 'tcp' || options.udp) {
+      this.handleTCP(options, callback)
+    } else {
+      console.log("I executed")
+      console.log(protocol)
+      console.log(options.udp)
+      this.handleUDP(options, callback)
+    }
+
   } // end connect
 
   // Handle TCP connections
-  handleTCP(options, callback) {
+  handleTCP (options, callback) {
     this.proxy = net.createServer({ allowHalfOpen: true }, (c) => {
       return libNet.connPiper(
         c,
         () => {
-          let stream;
+          let key
+
           if (this.secure) {
-            stream = this.dht.connect(
-              Buffer.from(this.peerKey.publicKey, "hex"),
-              { reusableSocket: true },
-            );
+            key = Buffer.from(this.publicKey, 'hex')
           } else {
-            stream = this.dht.connect(Buffer.from(this.peerKey, "hex"), {
-              reusableSocket: true,
-            });
+            key = Buffer.from(this.seed, 'hex')
           }
-          return stream;
+          return this.dht.connect(key, { reusableSocket: true })
         },
         { compress: false },
-        this.stats,
-      );
-    });
+        this.stats
+      )
+    })
 
-    const targetHost = options.address || "127.0.0.1";
+    const targetHost = options.host || '127.0.0.1'
     this.proxy.listen(options.port, targetHost, () => {
-      if (typeof callback === "function") {
-        callback();
+      if (typeof callback === 'function') {
+        callback()
+        this.state = 'listening'
       }
-    });
+    })
   }
 
   // Handle UDP connections
-  handleUDP(options, callback) {
-    let conn;
+  handleUDP (options, callback) {
+    let stream;
 
     if (this.secure) {
-      conn = this.dht.connect(Buffer.from(this.peerKey.publicKey, "hex"));
+      stream = this.dht.connect(Buffer.from(this.publicKey, "hex"));
     } else {
-      conn = this.dht.connect(Buffer.from(this.peerKey, "hex"));
+      stream = this.dht.connect(Buffer.from(this.seed, "hex"));
     }
 
-    conn.once("open", function () {
-      const handleUDP = libNet.udpPiper(conn, () => {
+    stream.once('open', function () {
+      const handleUDP = libNet.udpPiper(stream, () => {
         return libNet.udpConnect({
           port: options.port || 8989,
-          host: options.address || "127.0.0.1",
-          bind: true,
-        });
-      });
+          host: options.host || '127.0.0.1',
+          bind: true
+        })
+      })
 
-      if (typeof callback === "function") {
-        callback();
+      if (typeof callback === 'function') {
+        callback()
+        this.state = 'listening'
       }
-    });
+    })
   }
 
-  destroy() {
-    this.dht.destroy();
-    this.proxy.close();
-    return 0;
+  // resume functionality
+  async resume () {
+    await this.dht.resume()
+    this.state = 'listening'
+  }
+
+  async pause () {
+    await this.dht.suspend()
+    this.state = 'paused'
+  }
+
+  async destroy () {
+    await this.dht.destroy()
+    this.proxy.close()
+    this.proxy = null
+    this.state = 'destroyed'
+  }
+
+  // get mutable record(s) stored on the dht
+  async get (opts = {}) {
+    const record = await this.dht.mutableGet(this.publicKey, opts)
+    if (record) {
+      return { seq: record.seq, value: b4a.toString(record.value) }
+    }
+    return null
+  }
+
+  get info () {
+    return {
+      state: this.state,
+      secure: this.secure,
+      port: this.args.port,
+      host: this.args.host,
+      protocol: this.args.udp ? 'udp' : 'tcp',
+      key: this.seed,
+      publicKey: b4a.toString(this.publicKey, 'hex')
+    }
   }
 } // end client class
 
-module.exports = holesailClient;
+module.exports = HolesailClient
