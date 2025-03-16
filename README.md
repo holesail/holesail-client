@@ -32,15 +32,15 @@ const HolesailClient = require('holesail-client');
 Create a new instance of the `HolesailClient` class by passing your peer key:
 
 ```javascript
-const client = new HolesailClient(key);
+const client = new HolesailClient({ key: '<key>' });
 ```
 
 #### Secure Mode
 
-To establish a private connection, pass the optional "secure" flag. Ensure the server is also configured for secure mode:
+To avoid leaking access capability on the DHT, pass the optional "secure" flag. Ensure the server is also configured for secure mode:
 
 ```javascript
-const client = new HolesailClient(key, "secure");
+const client = new HolesailClient({ key: '<key>', secure: true });
 ```
 
 ### Connecting to the Server
@@ -48,9 +48,10 @@ const client = new HolesailClient(key, "secure");
 Use the `connect` method to establish a connection to the Holesail Server:
 
 ```javascript
-client.connect({ port: 5000, address: "127.0.0.1" }, () => {
-    console.log("Connected to 127.0.0.1:5000");
+client.connect({ port: 5000, host: '127.0.0.1', udp: true }, () => {
+    console.log('Connected to the server');
 });
+
 ```
 
 ### Destroying the Connection
@@ -59,6 +60,17 @@ To terminate the connection and clean up resources, call the `destroy` method:
 
 ```javascript
 client.destroy();
+```
+
+----------
+### Resuming and Pausing
+
+You can also resume or pause the connection:
+
+```javascript
+await client.resume();
+await client.pause();
+
 ```
 
 ----------
@@ -71,18 +83,17 @@ Here is a complete example demonstrating how to use the Holesail Client:
 const HolesailClient = require('holesail-client');
 
 // Replace with your peer key
-const key = "ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f";
+const client = new HolesailClient({ key: 'ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f' });
 
-const client = new HolesailClient(key);
-
-client.connect({ port: 8000, address: "127.0.0.1" }, () => {
-    console.log("Connected to the server");
+client.connect({ port: 8000, host: '127.0.0.1', udp: true }, () => {
+    console.log('Connected to the server');
 });
 
 setTimeout(() => {
-    console.log("Closing connection...");
+    console.log('Closing connection...');
     client.destroy();
 }, 5000);
+
 
 ```
 
@@ -90,14 +101,14 @@ setTimeout(() => {
 
 ## API Reference
 
-### `new HolesailClient(key, [secure])`
+### `new HolesailClient(opts)`
 
 Creates a new instance of the `HolesailClient` class.
 
 #### Parameters:
-
--   `key` (string): A hexadecimal string representing your peer key.
--   `secure` (optional, string): Pass "secure" to enable private connections. The server must also be running in secure mode. [See private vs public mode](https://docs.holesail.io/terminology/private-vs-public-connection-string)
+- opts (object): Options object:
+  - key (string): A hexadecimal string representing your peer key.
+  - secure (boolean, optional): Pass true to enable private connections. The server must also be running in secure mode. [See private vs public mode](https://docs.holesail.io/terminology/private-vs-public-connection-string)
 
 ----------
 
@@ -118,6 +129,32 @@ Establishes a connection to a Holesail Server.
 ### `destroy()`
 
 Terminates the connection and releases associated resources.
+
+### `resume()`
+
+Resumes the connection if it was paused.
+
+### `pause()`
+
+Pauses the connection.
+
+### `get(opts)`
+
+Retrieves a mutable record stored on the DHT.
+
+----------
+
+### `client.info`
+
+Provides information about the current state of the client, including:
+
+- state: Current state of the client (e.g., 'listening', 'paused', 'destroyed').
+- secure: Indicates whether the connection is private.
+- port: Current port used for the connection.
+- host: Current host used for the connection.
+- protocol: Current protocol being used ('udp' or 'tcp').
+- key: Connection key from the server.
+- publicKey: The public key announced on DHT for discovery.
 
 ----------
 
