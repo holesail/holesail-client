@@ -45,7 +45,7 @@ const client = new HolesailClient({ key: '<key>', secure: true });
 
 ### Connecting to the Server
 
-Use the `connect` method to establish a connection to the Holesail Server:
+Use the `connect` method to establish a connection to the Holesail Server, opts are auto detected but you can specify custom opts:
 
 ```javascript
 client.connect({ port: 5000, host: '127.0.0.1', udp: true }, () => {
@@ -83,7 +83,7 @@ Here is a complete example demonstrating how to use the Holesail Client:
 const HolesailClient = require('holesail-client');
 
 // Replace with your peer key
-const client = new HolesailClient({ key: 'ff14220e8155f8cd2bbeb2f6f2c3b7ed0212023449bc64b9435ec18c46b8de7f' });
+const client = new HolesailClient({ key: 'fwkkgncpatjpt5j6n53beqjoz7wtxtbse8d7u9z1y17esbz5dhpo' });
 
 client.connect({ port: 8000, host: '127.0.0.1', udp: true }, () => {
     console.log('Connected to the server');
