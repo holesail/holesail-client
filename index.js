@@ -3,6 +3,7 @@ const HyperDHT = require('hyperdht') // HyperDHT module for DHT functionality
 const net = require('net') // Net module for creating network clients and servers
 const libNet = require('@holesail/hyper-cmd-lib-net') // Custom network library
 const b4a = require('b4a')
+const z32 = require('z32')
 
 class HolesailClient {
   constructor (opts) {
@@ -10,10 +11,10 @@ class HolesailClient {
     this.secure = opts.secure || false
 
     if (this.secure) {
-      this.keyPair = HyperDHT.keyPair(b4a.from(this.seed, 'hex'))
+      this.keyPair = HyperDHT.keyPair(z32.decode(this.seed))
       this.publicKey = this.keyPair.publicKey
     } else {
-      this.publicKey = Buffer.from(this.seed, 'hex')
+      this.publicKey = z32.decode(this.seed)
     }
 
     this.dht = new HyperDHT({ keyPair: this.keyPair })
@@ -112,7 +113,7 @@ class HolesailClient {
       host: this.args.host,
       protocol: this.args.udp ? 'udp' : 'tcp',
       key: this.seed,
-      publicKey: b4a.toString(this.publicKey, 'hex')
+      publicKey: z32.encode(this.publicKey)
     }
   }
 } // end client class
