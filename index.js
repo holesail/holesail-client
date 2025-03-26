@@ -30,7 +30,7 @@ class HolesailClient {
 
     options.port = options.port ?? dhtData.port ?? 8989
     options.host = options.host ?? dhtData.host ?? '127.0.0.1'
-    options.udp = options.udp ?? dhtData.udp ?? true
+    options.udp = options.udp ?? dhtData.udp ?? false
 
     this.args = options
     if (!options.udp) {
