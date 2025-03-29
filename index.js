@@ -33,6 +33,7 @@ class HolesailClient {
     options.udp = options.udp ?? dhtData.udp ?? false
 
     this.args = options
+    this.state = 'waiting'
     if (!options.udp) {
       this.handleTCP(options, callback)
     } else {
