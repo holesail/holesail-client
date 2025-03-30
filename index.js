@@ -113,7 +113,6 @@ class HolesailClient {
       port: this.args.port,
       host: this.args.host,
       protocol: this.args.udp ? 'udp' : 'tcp',
-      seed: this.seed,
       key: this.seed,
       publicKey: z32.encode(this.publicKey)
     }
