@@ -62,16 +62,17 @@ class HolesailClient {
 
   // Handle UDP connections
   handleUDP (options, callback) {
-    const stream = this.dht.connect(this.publicKey)
+    const opts = {
+      port: options.port,
+      host: options.host,
+      bind: true
+    }
+    libNet.udpConnect(opts, (c) => {
+      const stream = () => {
+        return this.dht.connect(this.publicKey)
+      }
 
-    stream.once('open', () => {
-      libNet.udpPiper(stream, () => {
-        return libNet.udpConnect({
-          port: options.port,
-          host: options.host,
-          bind: true
-        })
-      })
+      libNet.udpPiper(stream, c, { retryDelay: 2000, client: true })
 
       this.state = 'listening'
       callback?.()
