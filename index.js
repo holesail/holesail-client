@@ -118,6 +118,51 @@ class HolesailClient {
       publicKey: z32.encode(this.publicKey)
     }
   }
+
+  static async ping (key, dht = null) {
+    let ownDht = false
+    if (!dht) {
+      dht = new HyperDHT()
+      ownDht = true
+    }
+
+    let result = null
+    const keyBuffer = z32.decode(key)
+
+    // Try assuming secure: true first
+    let publicKey = HyperDHT.keyPair(keyBuffer).publicKey
+    let record = await dht.mutableGet(publicKey, { latest: true })
+    if (record) {
+      const value = b4a.toString(record.value)
+      try {
+        result = JSON.parse(value)
+        result.protocol = result.udp ? 'udp' : 'tcp'
+      } catch {
+        // Ignore invalid JSON
+      }
+    }
+
+    // If no result, try assuming secure: false
+    if (!result) {
+      publicKey = keyBuffer
+      record = await dht.mutableGet(publicKey, { latest: true })
+      if (record) {
+        const value = b4a.toString(record.value)
+        try {
+          result = JSON.parse(value)
+          result.protocol = result.udp ? 'udp' : 'tcp'
+        } catch {
+          // Ignore invalid JSON
+        }
+      }
+    }
+
+    if (ownDht) {
+      await dht.destroy()
+    }
+
+    return result
+  }
 } // end client class
 
 module.exports = HolesailClient
