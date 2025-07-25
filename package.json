@@ -1,6 +1,6 @@
 {
   "name": "holesail-client",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "A client for securely connecting to holesail-server using P2P ",
   "main": "index.js",
   "repository": {
