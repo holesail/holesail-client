@@ -25,8 +25,7 @@
     "hyperdht": "^6.20.5",
     "net": "npm:bare-net",
     "z32": "^1.1.0",
-    "holesail-logger": "file:../holesail-logger"
-
+    "holesail-logger":  "^1.0.0"
   },
   "devDependencies": {
     "standard": "^17.1.2"

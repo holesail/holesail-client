@@ -4,7 +4,7 @@ const net = require('net') // Net module for creating network clients and server
 const libNet = require('@holesail/hyper-cmd-lib-net') // Custom network library
 const b4a = require('b4a')
 const z32 = require('z32')
-const HolesailLogger = require('../holesail-logger')
+const HolesailLogger = require('holesail-logger')
 
 class HolesailClient {
   constructor (opts) {
