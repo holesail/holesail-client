@@ -7,8 +7,8 @@ const z32 = require('z32')
 const HolesailLogger = require('holesail-logger')
 
 class HolesailClient {
-  constructor (opts) {
-    this.logger = opts.logger || new HolesailLogger({ prefix: 'HolesailClient' })
+  constructor (opts = {}) {
+    this.logger = opts.logger || new HolesailLogger({ prefix: 'HolesailClient', enabled: false, level: 1 })
     this.seed = opts.key
     this.secure = opts.secure || false
     if (this.secure) {
@@ -27,9 +27,9 @@ class HolesailClient {
     const dhtValue = await this.get()
     if (dhtValue) {
       dhtData = JSON.parse(dhtValue.value)
-      this.logger.log(`Retrieved DHT data: ${JSON.stringify(dhtData)}`)
+      this.logger.debug(`Retrieved DHT data: ${JSON.stringify(dhtData)}`)
     } else {
-      this.logger.log('No DHT data retrieved')
+      this.logger.warn('No DHT data retrieved')
     }
     options.port = options.port ?? dhtData.port ?? 8989
     options.host = options.host ?? dhtData.host ?? '127.0.0.1'
@@ -45,13 +45,13 @@ class HolesailClient {
 
   // Handle TCP connections
   handleTCP (options, callback) {
-    this.logger.log('Handling TCP connection')
+    this.logger.debug('Handling TCP connection')
     this.proxy = net.createServer({ allowHalfOpen: true }, (c) => {
-      this.logger.log('Incoming proxy connection')
+      this.logger.debug('Incoming proxy connection')
       return libNet.connPiper(
         c,
         () => {
-          this.logger.log(`Connecting to remote DHT: ${z32.encode(this.publicKey)}`)
+          this.logger.debug(`Connecting to remote DHT: ${z32.encode(this.publicKey)}`)
           return this.dht.connect(this.publicKey, { reusableSocket: true })
         },
         { compress: false, logger: this.logger },
@@ -67,16 +67,16 @@ class HolesailClient {
 
   // Handle UDP connections
   handleUDP (options, callback) {
-    this.logger.log('Handling UDP connection')
+    this.logger.debug('Handling UDP connection')
     const opts = {
       port: options.port,
       host: options.host,
       bind: true
     }
     libNet.udpConnect(opts, (c) => {
-      this.logger.log('UDP socket connected')
+      this.logger.debug('UDP socket connected')
       const stream = () => {
-        this.logger.log(`Connecting to remote DHT: ${z32.encode(this.publicKey)}`)
+        this.logger.debug(`Connecting to remote DHT: ${z32.encode(this.publicKey)}`)
         return this.dht.connect(this.publicKey)
       }
       libNet.udpPiper(stream, c, { retryDelay: 2000, client: true, logger: this.logger })
@@ -111,14 +111,14 @@ class HolesailClient {
 
   // get mutable record stored on the dht
   async get (opts = {}) {
-    this.logger.log('Getting DHT record')
+    this.logger.debug('Getting DHT record')
     const record = await this.dht.mutableGet(this.publicKey, opts)
     if (record) {
       const value = b4a.toString(record.value)
-      this.logger.log(`DHT get completed: seq=${record.seq}, value=${value}`)
+      this.logger.debug(`DHT get completed: seq=${record.seq}, value=${value}`)
       return { seq: record.seq, value }
     }
-    this.logger.log('DHT get: no record found')
+    this.logger.warn('DHT get: no record found')
     return null
   }
 
