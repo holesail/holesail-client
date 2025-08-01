@@ -8,7 +8,7 @@ const HolesailLogger = require('holesail-logger')
 
 class HolesailClient {
   constructor (opts = {}) {
-    this.logger = opts.logger || new HolesailLogger({ prefix: 'HolesailClient', enabled: false, level: 1 })
+    this.logger = opts.logger || new HolesailLogger({ prefix: 'Holesail', enabled: false, level: 1 })
     this.seed = opts.key
     this.secure = opts.secure || false
     if (this.secure) {
@@ -22,14 +22,14 @@ class HolesailClient {
   }
 
   async connect (options = {}, callback) {
-    this.logger.log(`Connecting to key: ${this.seed}, secure: ${this.secure}`)
+    this.logger.log({ type: 1, msg: `Connecting to key: ${this.seed}, secure: ${this.secure}` })
     let dhtData = {}
     const dhtValue = await this.get()
     if (dhtValue) {
       dhtData = JSON.parse(dhtValue.value)
-      this.logger.debug(`Retrieved DHT data: ${JSON.stringify(dhtData)}`)
+      this.logger.log({ type: 0, msg: `Retrieved DHT data: ${JSON.stringify(dhtData)}` })
     } else {
-      this.logger.warn('No DHT data retrieved')
+      this.logger.log({ type: 2, msg: 'No DHT data retrieved' })
     }
     options.port = options.port ?? dhtData.port ?? 8989
     options.host = options.host ?? dhtData.host ?? '127.0.0.1'
@@ -45,13 +45,13 @@ class HolesailClient {
 
   // Handle TCP connections
   handleTCP (options, callback) {
-    this.logger.debug('Handling TCP connection')
+    this.logger.log({ type: 0, msg: 'Handling TCP connection' })
     this.proxy = net.createServer({ allowHalfOpen: true }, (c) => {
-      this.logger.debug('Incoming proxy connection')
+      this.logger.log({ type: 0, msg: 'Incoming proxy connection' })
       return libNet.connPiper(
         c,
         () => {
-          this.logger.debug(`Connecting to remote DHT: ${z32.encode(this.publicKey)}`)
+          this.logger.log({ type: 0, msg: `Connecting to remote DHT: ${z32.encode(this.publicKey)}` })
           return this.dht.connect(this.publicKey, { reusableSocket: true })
         },
         { compress: false, logger: this.logger },
@@ -60,23 +60,23 @@ class HolesailClient {
     })
     this.proxy.listen(options.port, options.host, () => {
       this.state = 'listening'
-      this.logger.log(`Proxy listening on ${options.host}:${options.port}`)
+      this.logger.log({ type: 1, msg: `Proxy listening on ${options.host}:${options.port}` })
       callback?.()
     })
   }
 
   // Handle UDP connections
   handleUDP (options, callback) {
-    this.logger.debug('Handling UDP connection')
+    this.logger.log({ type: 0, msg: 'Handling UDP connection' })
     const opts = {
       port: options.port,
       host: options.host,
       bind: true
     }
     libNet.udpConnect(opts, (c) => {
-      this.logger.debug('UDP socket connected')
+      this.logger.log({ type: 0, msg: 'UDP socket connected' })
       const stream = () => {
-        this.logger.debug(`Connecting to remote DHT: ${z32.encode(this.publicKey)}`)
+        this.logger.log({ type: 0, msg: `Connecting to remote DHT: ${z32.encode(this.publicKey)}` })
         return this.dht.connect(this.publicKey)
       }
       libNet.udpPiper(stream, c, { retryDelay: 2000, client: true, logger: this.logger })
@@ -87,38 +87,38 @@ class HolesailClient {
 
   // resume functionality
   async resume () {
-    this.logger.log('Resuming client')
+    this.logger.log({ type: 1, msg: 'Resuming client' })
     await this.dht.resume()
     this.state = 'listening'
-    this.logger.log('Client resumed')
+    this.logger.log({ type: 1, msg: 'Client resumed' })
   }
 
   async pause () {
-    this.logger.log('Pausing client')
+    this.logger.log({ type: 1, msg: 'Pausing client' })
     await this.dht.suspend()
     this.state = 'paused'
-    this.logger.log('Client paused')
+    this.logger.log({ type: 1, msg: 'Client paused' })
   }
 
   async destroy () {
-    this.logger.log('Destroying client')
+    this.logger.log({ type: 1, msg: 'Destroying client' })
     await this.dht.destroy()
     this.proxy?.close()
     this.proxy = null
     this.state = 'destroyed'
-    this.logger.log('Client destroyed')
+    this.logger.log({ type: 1, msg: 'Client destroyed' })
   }
 
   // get mutable record stored on the dht
   async get (opts = {}) {
-    this.logger.debug('Getting DHT record')
+    this.logger.log({ type: 0, msg: 'Getting DHT record' })
     const record = await this.dht.mutableGet(this.publicKey, opts)
     if (record) {
       const value = b4a.toString(record.value)
-      this.logger.debug(`DHT get completed: seq=${record.seq}, value=${value}`)
+      this.logger.log({ type: 0, msg: `DHT get completed: seq=${record.seq}, value=${value}` })
       return { seq: record.seq, value }
     }
-    this.logger.warn('DHT get: no record found')
+    this.logger.log({ type: 2, msg: 'DHT get: no record found' })
     return null
   }
 
