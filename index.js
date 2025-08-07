@@ -6,32 +6,33 @@ const b4a = require('b4a')
 const z32 = require('z32')
 
 class HolesailClient {
-  constructor (opts) {
+  constructor (opts = {}) {
+    this.logger = opts.logger || { log: () => {} }
     this.seed = opts.key
     this.secure = opts.secure || false
-
     if (this.secure) {
       this.keyPair = HyperDHT.keyPair(z32.decode(this.seed))
       this.publicKey = this.keyPair.publicKey
     } else {
       this.publicKey = z32.decode(this.seed)
     }
-
     this.dht = new HyperDHT({ keyPair: this.keyPair })
     this.stats = {}
   }
 
   async connect (options = {}, callback) {
+    this.logger.log({ type: 1, msg: `Connecting to key: ${this.seed}, secure: ${this.secure}` })
     let dhtData = {}
     const dhtValue = await this.get()
     if (dhtValue) {
       dhtData = JSON.parse(dhtValue.value)
+      this.logger.log({ type: 0, msg: `Retrieved DHT data: ${JSON.stringify(dhtData)}` })
+    } else {
+      this.logger.log({ type: 2, msg: 'No DHT data retrieved' })
     }
-
     options.port = options.port ?? dhtData.port ?? 8989
     options.host = options.host ?? dhtData.host ?? '127.0.0.1'
     options.udp = options.udp ?? dhtData.udp ?? false
-
     this.args = options
     this.state = 'waiting'
     if (!options.udp) {
@@ -43,37 +44,41 @@ class HolesailClient {
 
   // Handle TCP connections
   handleTCP (options, callback) {
+    this.logger.log({ type: 0, msg: 'Handling TCP connection' })
     this.proxy = net.createServer({ allowHalfOpen: true }, (c) => {
+      this.logger.log({ type: 0, msg: 'Incoming proxy connection' })
       return libNet.connPiper(
         c,
         () => {
+          this.logger.log({ type: 0, msg: `Connecting to remote DHT: ${z32.encode(this.publicKey)}` })
           return this.dht.connect(this.publicKey, { reusableSocket: true })
         },
-        { compress: false },
+        { compress: false, logger: this.logger },
         this.stats
       )
     })
-
     this.proxy.listen(options.port, options.host, () => {
       this.state = 'listening'
+      this.logger.log({ type: 1, msg: `Proxy listening on ${options.host}:${options.port}` })
       callback?.()
     })
   }
 
   // Handle UDP connections
   handleUDP (options, callback) {
+    this.logger.log({ type: 0, msg: 'Handling UDP connection' })
     const opts = {
       port: options.port,
       host: options.host,
       bind: true
     }
     libNet.udpConnect(opts, (c) => {
+      this.logger.log({ type: 0, msg: 'UDP socket connected' })
       const stream = () => {
+        this.logger.log({ type: 0, msg: `Connecting to remote DHT: ${z32.encode(this.publicKey)}` })
         return this.dht.connect(this.publicKey)
       }
-
-      libNet.udpPiper(stream, c, { retryDelay: 2000, client: true })
-
+      libNet.udpPiper(stream, c, { retryDelay: 2000, client: true, logger: this.logger })
       this.state = 'listening'
       callback?.()
     })
@@ -81,28 +86,38 @@ class HolesailClient {
 
   // resume functionality
   async resume () {
+    this.logger.log({ type: 1, msg: 'Resuming client' })
     await this.dht.resume()
     this.state = 'listening'
+    this.logger.log({ type: 1, msg: 'Client resumed' })
   }
 
   async pause () {
+    this.logger.log({ type: 1, msg: 'Pausing client' })
     await this.dht.suspend()
     this.state = 'paused'
+    this.logger.log({ type: 1, msg: 'Client paused' })
   }
 
   async destroy () {
+    this.logger.log({ type: 1, msg: 'Destroying client' })
     await this.dht.destroy()
-    this.proxy.close()
+    this.proxy?.close()
     this.proxy = null
     this.state = 'destroyed'
+    this.logger.log({ type: 1, msg: 'Client destroyed' })
   }
 
   // get mutable record stored on the dht
   async get (opts = {}) {
+    this.logger.log({ type: 0, msg: 'Getting DHT record' })
     const record = await this.dht.mutableGet(this.publicKey, opts)
     if (record) {
-      return { seq: record.seq, value: b4a.toString(record.value) }
+      const value = b4a.toString(record.value)
+      this.logger.log({ type: 0, msg: `DHT get completed: seq=${record.seq}, value=${value}` })
+      return { seq: record.seq, value }
     }
+    this.logger.log({ type: 2, msg: 'DHT get: no record found' })
     return null
   }
 
@@ -125,10 +140,8 @@ class HolesailClient {
       dht = new HyperDHT()
       ownDht = true
     }
-
     let result = null
     const keyBuffer = z32.decode(key)
-
     // Try assuming secure: true first
     let publicKey = HyperDHT.keyPair(keyBuffer).publicKey
     let record = await dht.mutableGet(publicKey, { latest: true })
@@ -141,7 +154,6 @@ class HolesailClient {
         // Ignore invalid JSON
       }
     }
-
     // If no result, try assuming secure: false
     if (!result) {
       publicKey = keyBuffer
@@ -156,11 +168,9 @@ class HolesailClient {
         }
       }
     }
-
     if (ownDht) {
       await dht.destroy()
     }
-
     return result
   }
 } // end client class
