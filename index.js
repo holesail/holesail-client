@@ -1,6 +1,5 @@
 // Importing required modules
 const HyperDHT = require('hyperdht') // HyperDHT module for DHT functionality
-const net = require('net') // Net module for creating network clients and servers
 const libNet = require('@holesail/hyper-cmd-lib-net') // Custom network library
 const b4a = require('b4a')
 const z32 = require('z32')
@@ -42,46 +41,37 @@ class HolesailClient {
     }
   } // end connect
 
-  // Handle TCP connections
+  // Handle TCP connections (unchanged, supports multiple naturally)
   handleTCP (options, callback) {
     this.logger.log({ type: 0, msg: 'Handling TCP connection' })
-    this.proxy = net.createServer({ allowHalfOpen: true }, (c) => {
-      this.logger.log({ type: 0, msg: 'Incoming proxy connection' })
-      return libNet.connPiper(
-        c,
-        () => {
-          this.logger.log({ type: 0, msg: `Connecting to remote DHT: ${z32.encode(this.publicKey)}` })
-          return this.dht.connect(this.publicKey, { reusableSocket: true })
-        },
-        { compress: false, logger: this.logger },
-        this.stats
-      )
-    })
-    this.proxy.listen(options.port, options.host, () => {
-      this.state = 'listening'
-      this.logger.log({ type: 1, msg: `Proxy listening on ${options.host}:${options.port}` })
-      callback?.()
-    })
+    this.proxy = libNet.createTcpProxy(
+      { port: options.port, host: options.host },
+      () => this.dht.connect(this.publicKey, { reusableSocket: true }),
+      { compress: false, logger: this.logger },
+      this.stats,
+      () => {
+        this.state = 'listening'
+        this.logger.log({ type: 1, msg: `Proxy listening on ${options.host}:${options.port}` })
+        callback?.()
+      }
+    )
   }
 
-  // Handle UDP connections
+  // Handle UDP connections (updated for framed reliable tunneling with multi-client support)
   handleUDP (options, callback) {
     this.logger.log({ type: 0, msg: 'Handling UDP connection' })
-    const opts = {
-      port: options.port,
-      host: options.host,
-      bind: true
-    }
-    libNet.udpConnect(opts, (c) => {
-      this.logger.log({ type: 0, msg: 'UDP socket connected' })
-      const stream = () => {
-        this.logger.log({ type: 0, msg: `Connecting to remote DHT: ${z32.encode(this.publicKey)}` })
-        return this.dht.connect(this.publicKey)
+    const { proxySocket, clients } = libNet.createUdpFramedProxy(
+      { port: options.port, host: options.host },
+      () => this.dht.connect(this.publicKey),
+      this.logger,
+      () => {
+        this.state = 'listening'
+        this.logger.log({ type: 1, msg: `Proxy listening on ${options.host}:${options.port} for UDP` })
+        callback?.()
       }
-      libNet.udpPiper(stream, c, { retryDelay: 2000, client: true, logger: this.logger })
-      this.state = 'listening'
-      callback?.()
-    })
+    )
+    this.proxy = proxySocket
+    this.clients = clients
   }
 
   // resume functionality
@@ -102,8 +92,15 @@ class HolesailClient {
   async destroy () {
     this.logger.log({ type: 1, msg: 'Destroying client' })
     await this.dht.destroy()
-    this.proxy?.close()
+    if (this.proxy) this.proxy.close()
+    if (this.clients) {
+      for (const client of this.clients.values()) {
+        client.remoteStream.destroy()
+      }
+      this.clients.clear()
+    }
     this.proxy = null
+    this.clients = null
     this.state = 'destroyed'
     this.logger.log({ type: 1, msg: 'Client destroyed' })
   }
