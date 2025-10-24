@@ -64,6 +64,7 @@ class HolesailClient {
       { port: options.port, host: options.host },
       () => this.dht.connect(this.publicKey),
       this.logger,
+      this.stats,
       () => {
         this.state = 'listening'
         this.logger.log({ type: 1, msg: `Proxy listening on ${options.host}:${options.port} for UDP` })
