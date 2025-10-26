@@ -5,7 +5,7 @@ const b4a = require('b4a')
 const z32 = require('z32')
 
 class HolesailClient {
-  constructor (opts = {}) {
+  constructor(opts = {}) {
     this.logger = opts.logger || { log: () => {} }
     this.seed = opts.key
     this.secure = opts.secure || false
@@ -19,7 +19,7 @@ class HolesailClient {
     this.stats = {}
   }
 
-  async connect (options = {}, callback) {
+  async connect(options = {}, callback) {
     this.logger.log({ type: 1, msg: `Connecting to key: ${this.seed}, secure: ${this.secure}` })
     let dhtData = {}
     const dhtValue = await this.get()
@@ -42,7 +42,7 @@ class HolesailClient {
   } // end connect
 
   // Handle TCP connections (unchanged, supports multiple naturally)
-  handleTCP (options, callback) {
+  handleTCP(options, callback) {
     this.logger.log({ type: 0, msg: 'Handling TCP connection' })
     this.proxy = libNet.createTcpProxy(
       { port: options.port, host: options.host },
@@ -58,7 +58,7 @@ class HolesailClient {
   }
 
   // Handle UDP connections (updated for framed reliable tunneling with multi-client support)
-  handleUDP (options, callback) {
+  handleUDP(options, callback) {
     this.logger.log({ type: 0, msg: 'Handling UDP connection' })
     const { proxySocket, clients } = libNet.createUdpFramedProxy(
       { port: options.port, host: options.host },
@@ -66,7 +66,10 @@ class HolesailClient {
       this.logger,
       () => {
         this.state = 'listening'
-        this.logger.log({ type: 1, msg: `Proxy listening on ${options.host}:${options.port} for UDP` })
+        this.logger.log({
+          type: 1,
+          msg: `Proxy listening on ${options.host}:${options.port} for UDP`
+        })
         callback?.()
       }
     )
@@ -75,21 +78,21 @@ class HolesailClient {
   }
 
   // resume functionality
-  async resume () {
+  async resume() {
     this.logger.log({ type: 1, msg: 'Resuming client' })
     await this.dht.resume()
     this.state = 'listening'
     this.logger.log({ type: 1, msg: 'Client resumed' })
   }
 
-  async pause () {
+  async pause() {
     this.logger.log({ type: 1, msg: 'Pausing client' })
     await this.dht.suspend()
     this.state = 'paused'
     this.logger.log({ type: 1, msg: 'Client paused' })
   }
 
-  async destroy () {
+  async destroy() {
     this.logger.log({ type: 1, msg: 'Destroying client' })
     await this.dht.destroy()
     if (this.proxy) this.proxy.close()
@@ -106,7 +109,7 @@ class HolesailClient {
   }
 
   // get mutable record stored on the dht
-  async get (opts = {}) {
+  async get(opts = {}) {
     this.logger.log({ type: 0, msg: 'Getting DHT record' })
     const record = await this.dht.mutableGet(this.publicKey, opts)
     if (record) {
@@ -118,7 +121,7 @@ class HolesailClient {
     return null
   }
 
-  get info () {
+  get info() {
     return {
       type: 'client',
       state: this.state,
@@ -131,7 +134,7 @@ class HolesailClient {
     }
   }
 
-  static async ping (key, dht = null) {
+  static async ping(key, dht = null) {
     let ownDht = false
     if (!dht) {
       dht = new HyperDHT()

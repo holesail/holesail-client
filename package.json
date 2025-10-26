@@ -3,6 +3,10 @@
   "version": "2.2.0",
   "description": "A client for securely connecting to holesail-server using P2P ",
   "main": "index.js",
+  "scripts": {
+    "test": "npx prettier . --check",
+    "lint": "npx prettier . --write"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/holesail/holesail-client.git"
@@ -19,14 +23,13 @@
   },
   "homepage": "https://github.com/holesail/holesail-client#readme",
   "dependencies": {
-    "@holesail/hyper-cmd-lib-net": "^0.4.0",
-    "b4a": "^1.6.7",
-    "bare-net": "^2.0.1",
-    "hyperdht": "^6.20.5",
-    "net": "npm:bare-net",
+    "@holesail/hyper-cmd-lib-net": "^1.1.1",
+    "b4a": "^1.7.3",
+    "hyperdht": "^6.27.0",
     "z32": "^1.1.0"
-    },
+  },
   "devDependencies": {
-    "standard": "^17.1.2"
+    "prettier": "^3.6.2",
+    "prettier-config-holepunch": "^2.0.0"
   }
 }
