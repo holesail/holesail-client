@@ -154,17 +154,30 @@ class HolesailClient {
         // Ignore invalid JSON
       }
     }
-    // If no result, try assuming secure: false
-    if (!result) {
-      publicKey = keyBuffer
-      record = await dht.mutableGet(publicKey, { latest: true })
-      if (record) {
-        const value = b4a.toString(record.value)
-        try {
-          result = JSON.parse(value)
-          result.protocol = result.udp ? 'udp' : 'tcp'
-        } catch {
-          // Ignore invalid JSON
+
+    const { publicKey, capability } = parse(invite)
+    let stream = dht.connect(publicKey, { reusableSocket: true })
+
+    let mux = new Protomux(stream)
+
+    let clientAuth = mux.createChannel({
+      protocol: 'holesail-probe',
+      messages: [
+        {
+          encoding: c.any,
+          onmessage: async (m) => {
+            console.log(m)
+            const { port, host, udp } = m
+            if (!ownDHT) {
+              stream.destroy()
+            }
+            await clientAuth.close()
+            dht = null
+            stream = null
+            mux = null
+            clientAuth = null
+            return { port, host, udp }
+          }
         }
       }
     }
