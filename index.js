@@ -1,31 +1,29 @@
-// Importing required modules
-const HyperDHT = require('hyperdht') // HyperDHT module for DHT functionality
-const libNet = require('/Volumes/superdisk/Developer/hyper-cmd-lib-net') // Custom network library
+const HyperDHT = require('hyperdht')
+const libNet = require('@holesail/hyper-cmd-lib-net')
 const b4a = require('b4a')
-const z32 = require('z32')
-const Protomux = require('protomux')
 const ReadyResource = require('ready-resource')
-const c = require('compact-encoding')
-const { parse } = require('/Volumes/superdisk/Developer/verify/index.js')
+const { parse } = require('@holesail/invite')
+const proto = require('@holesail/protocol')
+
+const { MODE_TUNNEL, MODE_PROBE } = proto
 
 const DEFAULT = {
   port: 8989,
   host: '127.0.0.1',
-  udp: 'false'
+  udp: false
 }
 
 class HolesailClient extends ReadyResource {
   constructor(opts = {}) {
     super()
     this.logger = opts.logger || {
-      debug: (data) => console.log(data),
-      info: (data) => console.log(data),
+      debug: () => {},
+      info: () => {},
       warn: () => {},
       error: () => {}
     }
     this.invite = opts.invite
-    this.dht = new HyperDHT()
-    this.stats = {}
+    this.dht = new HyperDHT({ bootstrap: opts.bootstrap })
     this._port = opts.port
     this._host = opts.host
     this._udp = opts.udp
@@ -42,82 +40,50 @@ class HolesailClient extends ReadyResource {
   }
 
   async _start() {
-    const config = await HolesailClient.probe(this.invite)
+    const needProbe = this._port == null || this._host == null || this._udp == null
+    let config
+    if (needProbe) {
+      config = await HolesailClient.probe(this.invite, this.dht)
+    }
+
     this.port = this._port ?? config.port ?? DEFAULT.port
     this.host = this._host ?? config.host ?? DEFAULT.host
     this.udp = this._udp ?? config.udp ?? DEFAULT.udp
     this.state = 'waiting'
-    if (this.udp) {
-      this.handleUDP()
-    } else {
-      this.handleTCP()
-    }
-  } // end connect
+    if (this.udp) this.handleUDP()
+    else this.handleTCP()
+  }
 
-  _authenticate(stream) {
-    const mux = new Protomux(stream)
-    const channel = mux.createChannel({
-      protocol: 'holesail-auth',
-      onopen: () => {
-        this.logger.debug('Auth channel opened')
-      },
-      messages: [
-        {
-          encoding: c.any,
-          onmessage: (m) => {
-            this.logger.debug('Auth response received')
-            channel.close()
-            mux.destroy()
-          }
-        }
-      ]
-    })
-    channel.open()
-    channel.messages[0].send({ capability: this.capability })
+  _openTunnel() {
+    const stream = this.dht.connect(this.publicKey, { reusableSocket: true })
+    stream.write(proto.encodeHeader(this.capability, MODE_TUNNEL))
+    return stream
   }
 
   handleTCP() {
     this.logger.debug('Handling TCP connection')
+    const opts = { port: this.port, host: this.host, logger: this.logger }
+    const createTunnel = () => this._openTunnel()
 
-    this.proxy = libNet.createTcpProxy(
-      { port: this.port, host: this.host },
-      () => {
-        console.log('i was called')
-        const stream = this.dht.connect(this.publicKey, { reusableSocket: true })
-        this._authenticate(stream)
-        return stream
-      },
-      { compress: false, logger: this.logger },
-      this.stats,
-      () => {
-        this.state = 'listening'
-        this.logger.info(`Proxy listening on ${this.host}:${this.port}`)
-      }
-    )
+    this.proxy = libNet.createTcpProxy(createTunnel, opts, () => {
+      this.state = 'listening'
+      this.logger.info(`Proxy listening on ${this.host}:${this.port}`)
+    })
   }
 
-  // Handle UDP connections (updated for framed reliable tunneling with multi-client support)
-  handleUDP(options, callback) {
+  handleUDP() {
     this.logger.debug('Handling UDP connection')
-    const { proxySocket, clients } = libNet.createUdpFramedProxy(
-      { port: options.port, host: options.host },
-      () => {
-        const stream = this.dht.connect(this.publicKey)
-        this._authenticate(stream)
-        return stream
-      },
-      this.logger,
-      () => {
-        this.state = 'listening'
-        this.logger.info(`Proxy listening on ${options.host}:${options.port} for UDP`)
-        callback?.()
-      }
-    )
+    const opts = { port: this.port, host: this.host, logger: this.logger }
+    const createTunnel = () => this._openTunnel()
+    const { proxySocket, clients } = libNet.createUdpFramedProxy(createTunnel, opts, () => {
+      this.state = 'listening'
+      this.logger.info(`Proxy listening on ${this.host}:${this.port} for UDP`)
+    })
+
     this.proxy = proxySocket
     this.clients = clients
   }
 
-  // resume functionality
   async resume() {
     this.logger.info('Resuming client')
     await this.dht.resume()
@@ -148,7 +114,6 @@ class HolesailClient extends ReadyResource {
     this.logger.info('Client destroyed')
   }
 
-  // done
   get info() {
     return {
       type: 'client',
@@ -160,53 +125,45 @@ class HolesailClient extends ReadyResource {
     }
   }
 
-  // done
   static async probe(invite, dhtInstance = null) {
     const ownDHT = !dhtInstance
     const dht = dhtInstance || new HyperDHT()
-
     const { publicKey, capability } = parse(invite)
 
     return new Promise((resolve, reject) => {
       const stream = dht.connect(publicKey, { reusableSocket: true })
-      const mux = new Protomux(stream)
+      stream.write(proto.encodeHeader(capability, MODE_PROBE))
 
-      const channel = mux.createChannel({
-        protocol: 'holesail-probe',
-        messages: [
-          {
-            encoding: c.any,
-            onmessage: async (m) => {
-              const { port, host, udp } = m
-              try {
-                // channel.close?.()
-                // stream.destroy()
-                // mux.destroy?.()
+      let buffer = b4a.alloc(0)
+      let settled = false
 
-                if (ownDHT) {
-                  // await dht.destroy()
-                }
-              } catch (e) {}
-
-              resolve({ port, host, udp })
-            }
-          }
-        ]
-      })
-
-      channel.open()
-      channel.messages[0].send({ capability })
-
-      stream.on('error', async (err) => {
+      const finish = async (err, result) => {
+        if (settled) return
+        settled = true
         try {
           stream.destroy()
-          if (ownDHT) await dht.destroy()
         } catch {}
+        if (ownDHT) {
+          try {
+            await dht.destroy()
+          } catch {}
+        }
+        if (err) reject(err)
+        else resolve(result)
+      }
 
-        reject(err)
+      stream.on('data', (chunk) => {
+        if (settled) return
+        buffer = b4a.concat([buffer, chunk])
+        const decoded = proto.decodeProbeResponse(buffer)
+        if (!decoded) return
+        finish(null, { port: decoded.port, host: decoded.host, udp: decoded.udp })
       })
+
+      stream.on('error', (err) => finish(err))
+      stream.on('close', () => finish(new Error('Stream closed before probe response')))
     })
   }
-} // end client class
+}
 
 module.exports = HolesailClient

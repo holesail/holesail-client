@@ -4,8 +4,9 @@
   "description": "A client for connecting to Holesail P2P reverse proxy. ",
   "main": "index.js",
   "scripts": {
-    "test": "npx prettier . --check",
-    "lint": "npx prettier . --write"
+    "test": "npm run check && node test.mjs && bare test.mjs",
+    "check": "npx prettier . --check",
+    "format": "npx prettier . --write"
   },
   "repository": {
     "type": "git",
@@ -26,9 +27,7 @@
     "@holesail/hyper-cmd-lib-net": "^1.1.1",
     "b4a": "^1.7.3",
     "hyperdht": "^6.27.0",
-    "protomux": "^3.10.1",
-    "ready-resource": "^1.2.0",
-    "z32": "^1.1.0"
+    "ready-resource": "^1.2.0"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
