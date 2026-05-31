@@ -25,6 +25,8 @@
   "homepage": "https://github.com/holesail/holesail-client#readme",
   "dependencies": {
     "@holesail/hyper-cmd-lib-net": "^1.1.1",
+    "@holesail/invite": "^1.0.0",
+    "@holesail/protocol": "^1.0.0",
     "b4a": "^1.7.3",
     "hyperdht": "^6.27.0",
     "ready-resource": "^1.2.0"

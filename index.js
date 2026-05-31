@@ -23,16 +23,15 @@ class HolesailClient extends ReadyResource {
       error: () => {}
     }
     this.invite = opts.invite
-    this.dht = new HyperDHT({ bootstrap: opts.bootstrap })
-    this._port = opts.port
-    this._host = opts.host
-    this._udp = opts.udp
-    this.port = null
-    this.host = null
-    this.udp = null
+    this.port = opts.port || null
+    this.host = opts.host || null
+    this.udp = opts.udp || null
+    this.dht = opts.dht || null
+    this.bootstrap = opts.bootstrap || {}
   }
 
   async _open() {
+    this.dht = new HyperDHT({ bootstrap: this.bootstrap })
     const { publicKey, capability } = parse(this.invite)
     this.publicKey = publicKey
     this.capability = capability
@@ -40,15 +39,15 @@ class HolesailClient extends ReadyResource {
   }
 
   async _start() {
-    const needProbe = this._port == null || this._host == null || this._udp == null
+    const needProbe = this.port === null || this.host === null || this.udp === null
     let config
     if (needProbe) {
       config = await HolesailClient.probe(this.invite, this.dht)
     }
 
-    this.port = this._port ?? config.port ?? DEFAULT.port
-    this.host = this._host ?? config.host ?? DEFAULT.host
-    this.udp = this._udp ?? config.udp ?? DEFAULT.udp
+    this.port = this.port ?? config.port ?? DEFAULT.port
+    this.host = this.host ?? config.host ?? DEFAULT.host
+    this.udp = this.udp ?? config.udp ?? DEFAULT.udp
     this.state = 'waiting'
     if (this.udp) this.handleUDP()
     else this.handleTCP()
@@ -57,6 +56,7 @@ class HolesailClient extends ReadyResource {
   _openTunnel() {
     const stream = this.dht.connect(this.publicKey, { reusableSocket: true })
     stream.write(proto.encodeHeader(this.capability, MODE_TUNNEL))
+    this.emit('connect')
     return stream
   }
 
@@ -68,6 +68,7 @@ class HolesailClient extends ReadyResource {
     this.proxy = libNet.createTcpProxy(createTunnel, opts, () => {
       this.state = 'listening'
       this.logger.info(`Proxy listening on ${this.host}:${this.port}`)
+      this.emit('listening')
     })
   }
 
@@ -98,7 +99,7 @@ class HolesailClient extends ReadyResource {
     this.logger.info('Client paused')
   }
 
-  async destroy() {
+  async _close() {
     this.logger.info('Destroying client')
     await this.dht.destroy()
     if (this.proxy) this.proxy.close()
@@ -112,15 +113,15 @@ class HolesailClient extends ReadyResource {
     this.clients = null
     this.state = 'destroyed'
     this.logger.info('Client destroyed')
+    this.emit('close')
   }
 
   get info() {
     return {
-      type: 'client',
       state: this.state,
       port: this.port,
       host: this.host,
-      protocol: this.udp ? 'udp' : 'tcp',
+      udp: this.udp,
       invite: this.invite
     }
   }
