@@ -17,10 +17,10 @@ class HolesailClient extends ReadyResource {
   constructor(opts = {}) {
     super()
     this.logger = opts.logger || {
-      debug: () => {},
-      info: () => {},
-      warn: () => {},
-      error: () => {}
+      debug: noop,
+      info: noop,
+      warn: noop,
+      error: noop
     }
     this.invite = opts.invite
     this.port = +opts.port || null
@@ -168,5 +168,7 @@ class HolesailClient extends ReadyResource {
     })
   }
 }
+
+const noop = () => {}
 
 module.exports = HolesailClient
