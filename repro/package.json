@@ -1,0 +1,13 @@
+{
+  "name": "hyperdht-firewalled-repro",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Minimal repro: a firewalled:false HyperDHT node cannot send/receive RPC traffic on some Windows environments, even though a default (firewalled:true) node reaches the same peers fine in the same run.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "hyperdht": "^6.33.2"
+  }
+}
