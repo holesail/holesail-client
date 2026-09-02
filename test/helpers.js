@@ -1,4 +1,3 @@
-const testnet = require('hyperdht/testnet.js')
 const HyperDHT = require('hyperdht')
 const net = require('net')
 const dgram = require('dgram')
@@ -13,7 +12,54 @@ const HolesailClient = require('../index.js')
 const { MODE_TUNNEL, MODE_PROBE } = proto
 
 async function createTestnet(t, size = 3) {
-  return testnet(size, { teardown: t.teardown })
+  // hyperdht/testnet.js only passes an explicit (random) port to its first
+  // node - every later node is constructed with no port at all, so it falls
+  // back to HyperDHT's hardcoded default port (49737). Binding that same
+  // fixed port from many nodes in the same process normally fails loudly
+  // (EADDRINUSE) and falls back to a random one - except on Windows, where a
+  // duplicate UDP bind can succeed silently, leaving multiple DHT nodes
+  // sharing one port and each other's traffic. Building the swarm here with
+  // an explicit random port on every node avoids relying on that fallback.
+  const nodes = []
+  const bootstrap = []
+
+  const first = new HyperDHT({
+    ephemeral: false,
+    firewalled: false,
+    bootstrap: [],
+    port: 0,
+    host: '127.0.0.1'
+  })
+  await first.ready()
+  nodes.push(first)
+  bootstrap.push({ host: '127.0.0.1', port: first.address().port })
+
+  while (nodes.length < size) {
+    const node = new HyperDHT({
+      ephemeral: false,
+      firewalled: false,
+      bootstrap,
+      port: 0,
+      host: '127.0.0.1'
+    })
+    await node.ready()
+    nodes.push(node)
+  }
+
+  t.teardown(
+    async () => {
+      for (let i = nodes.length - 1; i >= 0; i--) await nodes[i].destroy()
+    },
+    { order: Infinity }
+  )
+
+  return {
+    nodes,
+    bootstrap,
+    [Symbol.iterator]() {
+      return nodes[Symbol.iterator]()
+    }
+  }
 }
 
 async function startClient(t, testnet, remote, opts = {}) {
@@ -79,7 +125,7 @@ function udpEchoServer(t) {
 
 async function rawServer(t, testnet, opts = {}) {
   const { capability, keyPair, invite } = generate(opts.seed)
-  const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled: false })
+  const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled: false, port: 0 })
   // Announcing before bootstrap finishes populating the routing table means
   // the announce's own node-discovery lookup finds nothing to store the
   // record with - it "succeeds" having told no one. On fast networks

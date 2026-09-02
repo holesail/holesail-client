@@ -36,7 +36,11 @@ class HolesailClient extends ReadyResource {
     const { publicKey, capability } = parse(this.invite)
     this.publicKey = publicKey
     this.capability = capability
-    this.dht = new HyperDHT({ bootstrap: this.bootstrap })
+    // HyperDHT falls back to a fixed default port (49737) for its own base
+    // socket when none is given, which multiple instances on the same
+    // machine (or even multiple sockets within this same process) can end
+    // up contending for - bind an explicit random one instead.
+    this.dht = new HyperDHT({ bootstrap: this.bootstrap, port: 0 })
     // A freshly constructed DHT node's routing table starts empty - findPeer
     // would otherwise report PEER_NOT_FOUND before bootstrap has a chance to
     // populate it (this can take several seconds on slower networks).
@@ -141,7 +145,7 @@ class HolesailClient extends ReadyResource {
 
   static async probe(invite, dhtInstance = null) {
     const ownDHT = !!dhtInstance
-    const dht = dhtInstance || new HyperDHT()
+    const dht = dhtInstance || new HyperDHT({ port: 0 })
     const { publicKey, capability } = parse(invite)
 
     await dht.ready()
