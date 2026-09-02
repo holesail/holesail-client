@@ -20,16 +20,32 @@ async function main() {
   await client.ready()
 
   console.log('connecting...')
-  const socket = client.connect(keyPair.publicKey)
-  await new Promise((resolve, reject) => {
-    socket.once('connect', resolve)
-    socket.once('error', reject)
-  })
-  console.log('connected')
+  try {
+    const socket = client.connect(keyPair.publicKey)
+    await new Promise((resolve, reject) => {
+      socket.once('connect', resolve)
+      socket.once('error', reject)
+    })
+    console.log('connected')
+  } finally {
+    // Kernel-level packet counters from udx-native, straight from the OS
+    // socket - do outbound sends ever actually leave the machine, and does
+    // anything ever come back, regardless of what dht-rpc makes of it.
+    logSocketStats('server.serverSocket', server.io.serverSocket)
+    logSocketStats('server.clientSocket', server.io.clientSocket)
+    logSocketStats('client.serverSocket', client.io.serverSocket)
+    logSocketStats('client.clientSocket', client.io.clientSocket)
+  }
 
   await server.destroy()
   await client.destroy()
   await swarm.destroy()
+}
+
+function logSocketStats(label, socket) {
+  console.log(
+    `[stats] ${label} tx=${socket.packetsTransmitted} rx=${socket.packetsReceived} droppedByKernel=${socket.packetsDroppedByKernel}`
+  )
 }
 
 main().catch((err) => {
