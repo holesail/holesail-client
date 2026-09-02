@@ -125,12 +125,19 @@ function udpEchoServer(t) {
 
 async function rawServer(t, testnet, opts = {}) {
   const { capability, keyPair, invite } = generate(opts.seed)
-  const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled: false, port: 0 })
-  // Announcing before bootstrap finishes populating the routing table means
-  // the announce's own node-discovery lookup finds nothing to store the
-  // record with - it "succeeds" having told no one. On fast networks
-  // bootstrap resolves before anyone notices; on slower ones this silently
-  // makes the server unreachable via probe/connect.
+  const dht = new HyperDHT({
+    bootstrap: testnet.bootstrap,
+    firewalled: false,
+    port: 0,
+    // Bootstrap only ever contains the swarm's entry node - everything else
+    // this dht knows is normally discovered via its own self-lookup query
+    // during bootstrap, which on some platforms can finish having found (and
+    // so stored) nothing, leaving the announce with no one to tell. Seeding
+    // every testnet node directly into the routing table up front means the
+    // announce always has somewhere to go regardless of whether that
+    // self-lookup actually worked.
+    nodes: testnet.nodes.map((node) => ({ host: '127.0.0.1', port: node.address().port }))
+  })
   await dht.ready()
 
   const stats = { probes: 0, tunnels: 0, rejected: 0 }
