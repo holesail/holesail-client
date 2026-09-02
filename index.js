@@ -173,19 +173,39 @@ class HolesailClient extends ReadyResource {
           )
         }
       }
-      try {
-        const target = hash(publicKey)
-        const t0 = Date.now()
-        let n = 0
-        const q = dht.findPeer(target, { hash: false, retries: 10 })
-        q.on('error', (err) => console.error('[debug] findPeer stream error', err && err.message))
-        for await (const data of q) {
-          n++
-          console.error('[debug] findPeer data #' + n, JSON.stringify(data && data.from))
+      const target = hash(publicKey)
+      const start = Date.now()
+      for (let round = 1; round <= 6; round++) {
+        try {
+          const t0 = Date.now()
+          let n = 0
+          const q = dht.findPeer(target, { hash: false, retries: 10 })
+          for await (const data of q) {
+            n++
+            console.error(
+              '[debug] round',
+              round,
+              't+' + (Date.now() - start) + 'ms',
+              'findPeer data #' + n,
+              JSON.stringify(data && data.from)
+            )
+          }
+          console.error(
+            '[debug] round',
+            round,
+            't+' + (Date.now() - start) + 'ms',
+            'findPeer finished in',
+            Date.now() - t0,
+            'ms, total candidates =',
+            n,
+            'table size now =',
+            dht.table.toArray().length
+          )
+          if (n > 0) break
+        } catch (err) {
+          console.error('[debug] round', round, 'findPeer threw', err && err.message)
         }
-        console.error('[debug] findPeer finished in', Date.now() - t0, 'ms, total candidates =', n)
-      } catch (err) {
-        console.error('[debug] findPeer threw', err && err.message)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
       }
     }
 
