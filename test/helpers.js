@@ -140,6 +140,37 @@ async function rawServer(t, testnet, opts = {}) {
   })
   await dht.ready()
 
+  if (process.env.HOLESAIL_DEBUG_PROBE) {
+    console.error(
+      '[debug:server] pre-listen table size =',
+      dht.table.toArray().length,
+      'firewalled =',
+      dht.firewalled
+    )
+    for (const node of testnet.nodes) {
+      const addr = node.address()
+      const t0 = Date.now()
+      try {
+        const pong = await dht.ping({ host: '127.0.0.1', port: addr.port })
+        console.error(
+          '[debug:server] ping 127.0.0.1:' + addr.port,
+          'ok in',
+          Date.now() - t0,
+          'ms',
+          JSON.stringify(pong)
+        )
+      } catch (err) {
+        console.error(
+          '[debug:server] ping 127.0.0.1:' + addr.port,
+          'FAILED in',
+          Date.now() - t0,
+          'ms',
+          err && err.message
+        )
+      }
+    }
+  }
+
   const stats = { probes: 0, tunnels: 0, rejected: 0 }
 
   // pipeTcpServer/pipeUdpFramedServer open their own local socket per
