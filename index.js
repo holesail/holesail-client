@@ -173,39 +173,28 @@ class HolesailClient extends ReadyResource {
           )
         }
       }
+      const { COMMANDS } = require('hyperdht/lib/constants')
       const target = hash(publicKey)
-      const start = Date.now()
-      for (let round = 1; round <= 6; round++) {
-        try {
-          const t0 = Date.now()
-          let n = 0
-          const q = dht.findPeer(target, { hash: false, retries: 10 })
-          for await (const data of q) {
-            n++
-            console.error(
-              '[debug] round',
-              round,
-              't+' + (Date.now() - start) + 'ms',
-              'findPeer data #' + n,
-              JSON.stringify(data && data.from)
-            )
+      try {
+        let n = 0
+        const q = dht.query(
+          { target, command: COMMANDS.FIND_PEER, value: null },
+          {
+            map: (node) => ({
+              from: node.from,
+              error: node.error,
+              hasValue: !!node.value,
+              valueLen: node.value ? node.value.length : 0
+            })
           }
-          console.error(
-            '[debug] round',
-            round,
-            't+' + (Date.now() - start) + 'ms',
-            'findPeer finished in',
-            Date.now() - t0,
-            'ms, total candidates =',
-            n,
-            'table size now =',
-            dht.table.toArray().length
-          )
-          if (n > 0) break
-        } catch (err) {
-          console.error('[debug] round', round, 'findPeer threw', err && err.message)
+        )
+        for await (const data of q) {
+          n++
+          console.error('[debug] raw reply #' + n, JSON.stringify(data))
         }
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        console.error('[debug] raw query finished, total replies =', n)
+      } catch (err) {
+        console.error('[debug] raw query threw', err && err.message)
       }
     }
 
