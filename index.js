@@ -37,6 +37,10 @@ class HolesailClient extends ReadyResource {
     this.publicKey = publicKey
     this.capability = capability
     this.dht = new HyperDHT({ bootstrap: this.bootstrap })
+    // A freshly constructed DHT node's routing table starts empty - findPeer
+    // would otherwise report PEER_NOT_FOUND before bootstrap has a chance to
+    // populate it (this can take several seconds on slower networks).
+    await this.dht.ready()
     await this._start()
   }
 
@@ -139,6 +143,8 @@ class HolesailClient extends ReadyResource {
     const ownDHT = !!dhtInstance
     const dht = dhtInstance || new HyperDHT()
     const { publicKey, capability } = parse(invite)
+
+    await dht.ready()
 
     try {
       let lastErr
