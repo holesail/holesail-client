@@ -140,6 +140,31 @@ class HolesailClient extends ReadyResource {
     const dht = dhtInstance || new HyperDHT()
     const { publicKey, capability } = parse(invite)
 
+    try {
+      let lastErr
+      for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
+        try {
+          return await HolesailClient._probeOnce(dht, publicKey, capability)
+        } catch (err) {
+          lastErr = err
+          // DHT lookups can transiently fail to locate a peer on slow/lossy
+          // transports (e.g. observed on Windows CI runners) even though the
+          // peer is up - retry a few times before giving up.
+          if (attempt === PROBE_MAX_ATTEMPTS || !RETRIABLE_DHT_ERRORS.has(err.code)) throw err
+          await new Promise((resolve) => setTimeout(resolve, PROBE_RETRY_DELAY * attempt))
+        }
+      }
+      throw lastErr
+    } finally {
+      if (!ownDHT) {
+        try {
+          await dht.destroy()
+        } catch {}
+      }
+    }
+  }
+
+  static _probeOnce(dht, publicKey, capability) {
     return new Promise((resolve, reject) => {
       const stream = dht.connect(publicKey, { reusableSocket: true })
       stream.write(proto.encodeHeader(capability, MODE_PROBE))
@@ -147,17 +172,12 @@ class HolesailClient extends ReadyResource {
       let buffer = b4a.alloc(0)
       let settled = false
 
-      const finish = async (err, result) => {
+      const finish = (err, result) => {
         if (settled) return
         settled = true
         try {
           stream.destroy()
         } catch {}
-        if (!ownDHT) {
-          try {
-            await dht.destroy()
-          } catch {}
-        }
         if (err) reject(err)
         else resolve(result)
       }
@@ -175,6 +195,10 @@ class HolesailClient extends ReadyResource {
     })
   }
 }
+
+const PROBE_MAX_ATTEMPTS = 3
+const PROBE_RETRY_DELAY = 250
+const RETRIABLE_DHT_ERRORS = new Set(['PEER_NOT_FOUND', 'PEER_CONNECTION_FAILED'])
 
 const noop = () => {}
 
