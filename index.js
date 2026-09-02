@@ -183,12 +183,7 @@ class HolesailClient extends ReadyResource {
           n++
           console.error('[debug] findPeer data #' + n, JSON.stringify(data && data.from))
         }
-        console.error(
-          '[debug] findPeer finished in',
-          Date.now() - t0,
-          'ms, total candidates =',
-          n
-        )
+        console.error('[debug] findPeer finished in', Date.now() - t0, 'ms, total candidates =', n)
       } catch (err) {
         console.error('[debug] findPeer threw', err && err.message)
       }
