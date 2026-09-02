@@ -1,3 +1,4 @@
+const testnet = require('hyperdht/testnet.js')
 const HyperDHT = require('hyperdht')
 const net = require('net')
 const dgram = require('dgram')
@@ -12,54 +13,7 @@ const HolesailClient = require('../index.js')
 const { MODE_TUNNEL, MODE_PROBE } = proto
 
 async function createTestnet(t, size = 3) {
-  // hyperdht/testnet.js only passes an explicit (random) port to its first
-  // node - every later node is constructed with no port at all, so it falls
-  // back to HyperDHT's hardcoded default port (49737). Binding that same
-  // fixed port from many nodes in the same process normally fails loudly
-  // (EADDRINUSE) and falls back to a random one - except on Windows, where a
-  // duplicate UDP bind can succeed silently, leaving multiple DHT nodes
-  // sharing one port and each other's traffic. Building the swarm here with
-  // an explicit random port on every node avoids relying on that fallback.
-  const nodes = []
-  const bootstrap = []
-
-  const first = new HyperDHT({
-    ephemeral: false,
-    firewalled: false,
-    bootstrap: [],
-    port: 0,
-    host: '127.0.0.1'
-  })
-  await first.ready()
-  nodes.push(first)
-  bootstrap.push({ host: '127.0.0.1', port: first.address().port })
-
-  while (nodes.length < size) {
-    const node = new HyperDHT({
-      ephemeral: false,
-      firewalled: false,
-      bootstrap,
-      port: 0,
-      host: '127.0.0.1'
-    })
-    await node.ready()
-    nodes.push(node)
-  }
-
-  t.teardown(
-    async () => {
-      for (let i = nodes.length - 1; i >= 0; i--) await nodes[i].destroy()
-    },
-    { order: Infinity }
-  )
-
-  return {
-    nodes,
-    bootstrap,
-    [Symbol.iterator]() {
-      return nodes[Symbol.iterator]()
-    }
-  }
+  return testnet(size, { teardown: t.teardown })
 }
 
 async function startClient(t, testnet, remote, opts = {}) {
@@ -125,51 +79,13 @@ function udpEchoServer(t) {
 
 async function rawServer(t, testnet, opts = {}) {
   const { capability, keyPair, invite } = generate(opts.seed)
-  const dht = new HyperDHT({
-    bootstrap: testnet.bootstrap,
-    firewalled: false,
-    port: 0,
-    // Bootstrap only ever contains the swarm's entry node - everything else
-    // this dht knows is normally discovered via its own self-lookup query
-    // during bootstrap, which on some platforms can finish having found (and
-    // so stored) nothing, leaving the announce with no one to tell. Seeding
-    // every testnet node directly into the routing table up front means the
-    // announce always has somewhere to go regardless of whether that
-    // self-lookup actually worked.
-    nodes: testnet.nodes.map((node) => ({ host: '127.0.0.1', port: node.address().port }))
-  })
+  const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled: false })
+  // Announcing before bootstrap finishes populating the routing table means
+  // the announce's own node-discovery lookup finds nothing to store the
+  // record with - it "succeeds" having told no one. On fast networks
+  // bootstrap resolves before anyone notices; on slower ones this silently
+  // makes the server unreachable via probe/connect.
   await dht.ready()
-
-  if (process.env.HOLESAIL_DEBUG_PROBE) {
-    console.error(
-      '[debug:server] pre-listen table size =',
-      dht.table.toArray().length,
-      'firewalled =',
-      dht.firewalled
-    )
-    for (const node of testnet.nodes) {
-      const addr = node.address()
-      const t0 = Date.now()
-      try {
-        const pong = await dht.ping({ host: '127.0.0.1', port: addr.port })
-        console.error(
-          '[debug:server] ping 127.0.0.1:' + addr.port,
-          'ok in',
-          Date.now() - t0,
-          'ms',
-          JSON.stringify(pong)
-        )
-      } catch (err) {
-        console.error(
-          '[debug:server] ping 127.0.0.1:' + addr.port,
-          'FAILED in',
-          Date.now() - t0,
-          'ms',
-          err && err.message
-        )
-      }
-    }
-  }
 
   const stats = { probes: 0, tunnels: 0, rejected: 0 }
 
@@ -234,34 +150,6 @@ async function rawServer(t, testnet, opts = {}) {
   }
 
   await server.listen(keyPair)
-
-  if (process.env.HOLESAIL_DEBUG_PROBE) {
-    const { COMMANDS } = require('hyperdht/lib/constants')
-    console.error(
-      '[debug:server]',
-      'table size =',
-      dht.table.toArray().length,
-      'relayAddresses =',
-      JSON.stringify(server.relayAddresses)
-    )
-    let n = 0
-    const q = dht.query(
-      { target: server.target, command: COMMANDS.FIND_PEER, value: null },
-      {
-        map: (node) => ({
-          from: node.from,
-          error: node.error,
-          hasValue: !!node.value,
-          valueLen: node.value ? node.value.length : 0
-        })
-      }
-    )
-    for await (const data of q) {
-      n++
-      console.error('[debug:server] self-query reply #' + n, JSON.stringify(data))
-    }
-    console.error('[debug:server] self-query finished, total replies =', n)
-  }
 
   return { dht, server, keyPair, capability, invite, stats }
 }

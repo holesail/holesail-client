@@ -36,11 +36,7 @@ class HolesailClient extends ReadyResource {
     const { publicKey, capability } = parse(this.invite)
     this.publicKey = publicKey
     this.capability = capability
-    // HyperDHT falls back to a fixed default port (49737) for its own base
-    // socket when none is given, which multiple instances on the same
-    // machine (or even multiple sockets within this same process) can end
-    // up contending for - bind an explicit random one instead.
-    this.dht = new HyperDHT({ bootstrap: this.bootstrap, port: 0 })
+    this.dht = new HyperDHT({ bootstrap: this.bootstrap })
     // A freshly constructed DHT node's routing table starts empty - findPeer
     // would otherwise report PEER_NOT_FOUND before bootstrap has a chance to
     // populate it (this can take several seconds on slower networks).
@@ -145,34 +141,10 @@ class HolesailClient extends ReadyResource {
 
   static async probe(invite, dhtInstance = null) {
     const ownDHT = !!dhtInstance
-    const dht = dhtInstance || new HyperDHT({ port: 0 })
+    const dht = dhtInstance || new HyperDHT()
     const { publicKey, capability } = parse(invite)
 
     await dht.ready()
-
-    if (process.env.HOLESAIL_DEBUG_PROBE) {
-      const hash = require('hypercore-crypto').hash
-      const { COMMANDS } = require('hyperdht/lib/constants')
-      console.error('[debug:client] table size =', dht.table.toArray().length)
-      const target = hash(publicKey)
-      let n = 0
-      const q = dht.query(
-        { target, command: COMMANDS.FIND_PEER, value: null },
-        {
-          map: (node) => ({
-            from: node.from,
-            error: node.error,
-            hasValue: !!node.value,
-            valueLen: node.value ? node.value.length : 0
-          })
-        }
-      )
-      for await (const data of q) {
-        n++
-        console.error('[debug:client] reply #' + n, JSON.stringify(data))
-      }
-      console.error('[debug:client] finished, total replies =', n)
-    }
 
     try {
       let lastErr

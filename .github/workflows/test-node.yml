@@ -21,5 +21,3 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm install
       - run: npm run test
-        env:
-          HOLESAIL_DEBUG_PROBE: 1
