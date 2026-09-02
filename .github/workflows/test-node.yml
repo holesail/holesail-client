@@ -19,15 +19,5 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Disable Windows Defender real-time scanning
-        if: runner.os == 'Windows'
-        shell: powershell
-        continue-on-error: true
-        # Defender inspecting every loopback UDP packet massively slows down
-        # the DHT tests on Windows runners, causing DHT lookups to time out
-        # (PEER_NOT_FOUND) before any peer can respond.
-        run: Set-MpPreference -DisableRealtimeMonitoring $true
       - run: npm install
       - run: npm run test
-        env:
-          HOLESAIL_DEBUG_PROBE: 1

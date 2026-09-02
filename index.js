@@ -146,58 +146,6 @@ class HolesailClient extends ReadyResource {
 
     await dht.ready()
 
-    if (process.env.HOLESAIL_DEBUG_PROBE) {
-      const hash = require('hypercore-crypto').hash
-      const nodes = dht.table.toArray()
-      console.error('[debug] dht.ready() resolved. table size =', nodes.length)
-      for (const node of nodes) {
-        const t0 = Date.now()
-        try {
-          const pong = await dht.ping({ host: node.host, port: node.port })
-          console.error(
-            '[debug] ping',
-            node.host + ':' + node.port,
-            'ok in',
-            Date.now() - t0,
-            'ms',
-            JSON.stringify(pong)
-          )
-        } catch (err) {
-          console.error(
-            '[debug] ping',
-            node.host + ':' + node.port,
-            'FAILED in',
-            Date.now() - t0,
-            'ms',
-            err && err.message
-          )
-        }
-      }
-      const { COMMANDS } = require('hyperdht/lib/constants')
-      const target = hash(publicKey)
-      try {
-        let n = 0
-        const q = dht.query(
-          { target, command: COMMANDS.FIND_PEER, value: null },
-          {
-            map: (node) => ({
-              from: node.from,
-              error: node.error,
-              hasValue: !!node.value,
-              valueLen: node.value ? node.value.length : 0
-            })
-          }
-        )
-        for await (const data of q) {
-          n++
-          console.error('[debug] raw reply #' + n, JSON.stringify(data))
-        }
-        console.error('[debug] raw query finished, total replies =', n)
-      } catch (err) {
-        console.error('[debug] raw query threw', err && err.message)
-      }
-    }
-
     try {
       let lastErr
       for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
@@ -205,18 +153,9 @@ class HolesailClient extends ReadyResource {
           return await HolesailClient._probeOnce(dht, publicKey, capability)
         } catch (err) {
           lastErr = err
-          if (process.env.HOLESAIL_DEBUG_PROBE) {
-            console.error(
-              '[debug] attempt',
-              attempt,
-              'failed with',
-              err && err.code,
-              err && err.message
-            )
-          }
           // DHT lookups can transiently fail to locate a peer on slow/lossy
-          // transports (e.g. observed on Windows CI runners) even though the
-          // peer is up - retry a few times before giving up.
+          // transports even though the peer is up - retry a few times before
+          // giving up.
           if (attempt === PROBE_MAX_ATTEMPTS || !RETRIABLE_DHT_ERRORS.has(err.code)) throw err
           await new Promise((resolve) => setTimeout(resolve, PROBE_RETRY_DELAY * attempt))
         }

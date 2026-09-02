@@ -12,16 +12,8 @@ const HolesailClient = require('../index.js')
 
 const { MODE_TUNNEL, MODE_PROBE } = proto
 
-async function createTestnet(t, size = 10) {
-  const swarm = await testnet(size, { teardown: t.teardown })
-  // The default bootstrap list is just the single entry node - on slower/
-  // lossier transports (observed on Windows CI runners), a client or server
-  // can finish its own bootstrap having only discovered a subset of this
-  // tiny swarm, and that subset isn't guaranteed to overlap with wherever a
-  // record actually landed. Seeding every node as a bootstrap contact makes
-  // that overlap far more likely regardless of platform timing.
-  swarm.bootstrap = swarm.nodes.map((node) => ({ host: '127.0.0.1', port: node.address().port }))
-  return swarm
+async function createTestnet(t, size = 3) {
+  return testnet(size, { teardown: t.teardown })
 }
 
 async function startClient(t, testnet, remote, opts = {}) {
@@ -88,6 +80,12 @@ function udpEchoServer(t) {
 async function rawServer(t, testnet, opts = {}) {
   const { capability, keyPair, invite } = generate(opts.seed)
   const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled: false })
+  // Announcing before bootstrap finishes populating the routing table means
+  // the announce's own node-discovery lookup finds nothing to store the
+  // record with - it "succeeds" having told no one. On fast networks
+  // bootstrap resolves before anyone notices; on slower ones this silently
+  // makes the server unreachable via probe/connect.
+  await dht.ready()
 
   const stats = { probes: 0, tunnels: 0, rejected: 0 }
 
