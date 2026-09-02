@@ -27,3 +27,6 @@ jobs:
       - run: node raw-udx.js
         if: always()
         working-directory: repro
+      - run: node raw-dht-rpc.js
+        if: always()
+        working-directory: repro
