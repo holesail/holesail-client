@@ -4,7 +4,7 @@
   "description": "A client for connecting to Holesail P2P reverse proxy. ",
   "main": "index.js",
   "scripts": {
-    "test": "npm run check && node test.mjs && bare test.mjs",
+    "test": "npm run check && node test/index.js",
     "check": "npx prettier . --check",
     "format": "npx prettier . --write"
   },
@@ -24,14 +24,16 @@
   },
   "homepage": "https://github.com/holesail/holesail-client#readme",
   "dependencies": {
-    "@holesail/hyper-cmd-lib-net": "^1.1.1",
-    "@holesail/invite": "^1.0.0",
+    "@holesail/hyper-cmd-lib-net": "^2.0.1",
+    "@holesail/invite": "^1.2.0",
     "@holesail/protocol": "^1.0.0",
-    "b4a": "^1.7.3",
-    "hyperdht": "^6.27.0",
+    "b4a": "^1.8.1",
+    "hyperdht": "^6.33.2",
     "ready-resource": "^1.2.0"
   },
   "devDependencies": {
+    "brittle": "^3.19.1",
+    "dgram": "npm:bare-dgram@^1.0.1",
     "prettier": "^3.6.2",
     "prettier-config-holepunch": "^2.0.0"
   }

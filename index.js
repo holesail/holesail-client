@@ -1,5 +1,5 @@
 const HyperDHT = require('hyperdht')
-const libNet = require('/Volumes/superdisk/Developer/hyper-cmd-lib-net/index')
+const libNet = require('@holesail/hyper-cmd-lib-net')
 const b4a = require('b4a')
 const ReadyResource = require('ready-resource')
 const { parse } = require('@holesail/invite')
@@ -23,12 +23,12 @@ class HolesailClient extends ReadyResource {
       error: noop
     }
     this.invite = opts.invite
-    this.port = +opts.port || null
+    this.port = opts.port === undefined || opts.port === null ? null : +opts.port
     this.host = opts.host || null
     this.udp = opts.udp ?? null
     this.bootstrap = opts.bootstrap || null
 
-    this.state = 'waiting'
+    this.state = null
   }
 
   async _open() {
@@ -51,8 +51,8 @@ class HolesailClient extends ReadyResource {
     this.port = this.port ?? config.port ?? DEFAULT.port
     this.host = this.host ?? config.host ?? DEFAULT.host
     this.udp = this.udp ?? config.udp ?? DEFAULT.udp
-    if (this.udp) this.handleUDP()
-    else this.handleTCP()
+    if (this.udp) await this.handleUDP()
+    else await this.handleTCP()
   }
 
   _openTunnel() {
@@ -67,10 +67,13 @@ class HolesailClient extends ReadyResource {
     const opts = { port: this.port, host: this.host, logger: this.logger }
     const createTunnel = () => this._openTunnel()
 
-    this.proxy = libNet.createTcpProxy(createTunnel, opts, () => {
-      this.state = 'listening'
-      this.emit('listening')
-      this.logger.info(`Proxy listening on ${this.host}:${this.port}`)
+    return new Promise((resolve) => {
+      this.proxy = libNet.createTcpProxy(createTunnel, opts, () => {
+        this.state = 'listening'
+        this.emit('listening')
+        this.logger.info(`Proxy listening on ${this.host}:${this.port}`)
+        resolve()
+      })
     })
   }
 
@@ -78,14 +81,18 @@ class HolesailClient extends ReadyResource {
     this.logger.debug('Handling UDP connection')
     const opts = { port: this.port, host: this.host, logger: this.logger }
     const createTunnel = () => this._openTunnel()
-    const { proxySocket, clients } = libNet.createUdpFramedProxy(createTunnel, opts, () => {
-      this.state = 'listening'
-      this.emit('listening')
-      this.logger.info(`Proxy listening on ${this.host}:${this.port} for UDP`)
-    })
 
-    this.proxy = proxySocket
-    this.clients = clients
+    return new Promise((resolve) => {
+      const { proxySocket, clients } = libNet.createUdpFramedProxy(createTunnel, opts, () => {
+        this.state = 'listening'
+        this.emit('listening')
+        this.logger.info(`Proxy listening on ${this.host}:${this.port} for UDP`)
+        resolve()
+      })
+
+      this.proxy = proxySocket
+      this.clients = clients
+    })
   }
 
   async resume() {
@@ -108,7 +115,7 @@ class HolesailClient extends ReadyResource {
     if (this.proxy) this.proxy.close()
     if (this.clients) {
       for (const client of this.clients.values()) {
-        client.remoteStream.destroy()
+        client.stream.destroy()
       }
       this.clients.clear()
     }
@@ -129,7 +136,7 @@ class HolesailClient extends ReadyResource {
   }
 
   static async probe(invite, dhtInstance = null) {
-    const ownDHT = !dhtInstance
+    const ownDHT = !!dhtInstance
     const dht = dhtInstance || new HyperDHT()
     const { publicKey, capability } = parse(invite)
 
@@ -146,7 +153,7 @@ class HolesailClient extends ReadyResource {
         try {
           stream.destroy()
         } catch {}
-        if (ownDHT) {
+        if (!ownDHT) {
           try {
             await dht.destroy()
           } catch {}
