@@ -151,6 +151,34 @@ async function rawServer(t, testnet, opts = {}) {
 
   await server.listen(keyPair)
 
+  if (process.env.HOLESAIL_DEBUG_PROBE) {
+    const { COMMANDS } = require('hyperdht/lib/constants')
+    console.error(
+      '[debug:server]',
+      'table size =',
+      dht.table.toArray().length,
+      'relayAddresses =',
+      JSON.stringify(server.relayAddresses)
+    )
+    let n = 0
+    const q = dht.query(
+      { target: server.target, command: COMMANDS.FIND_PEER, value: null },
+      {
+        map: (node) => ({
+          from: node.from,
+          error: node.error,
+          hasValue: !!node.value,
+          valueLen: node.value ? node.value.length : 0
+        })
+      }
+    )
+    for await (const data of q) {
+      n++
+      console.error('[debug:server] self-query reply #' + n, JSON.stringify(data))
+    }
+    console.error('[debug:server] self-query finished, total replies =', n)
+  }
+
   return { dht, server, keyPair, capability, invite, stats }
 }
 

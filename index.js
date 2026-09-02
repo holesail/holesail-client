@@ -146,6 +146,30 @@ class HolesailClient extends ReadyResource {
 
     await dht.ready()
 
+    if (process.env.HOLESAIL_DEBUG_PROBE) {
+      const hash = require('hypercore-crypto').hash
+      const { COMMANDS } = require('hyperdht/lib/constants')
+      console.error('[debug:client] table size =', dht.table.toArray().length)
+      const target = hash(publicKey)
+      let n = 0
+      const q = dht.query(
+        { target, command: COMMANDS.FIND_PEER, value: null },
+        {
+          map: (node) => ({
+            from: node.from,
+            error: node.error,
+            hasValue: !!node.value,
+            valueLen: node.value ? node.value.length : 0
+          })
+        }
+      )
+      for await (const data of q) {
+        n++
+        console.error('[debug:client] reply #' + n, JSON.stringify(data))
+      }
+      console.error('[debug:client] finished, total replies =', n)
+    }
+
     try {
       let lastErr
       for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
