@@ -55,6 +55,7 @@ async function attempt(i) {
   try {
     server = new HyperDHT({ bootstrap: swarm.bootstrap, firewalled: false })
     await server.ready()
+    console.log(`[${i}] server.ready() resolved, table size = ${server.table.toArray().length}`)
     const keyPair = HyperDHT.keyPair()
     await server.createServer(() => {}).listen(keyPair)
     console.log(`[${i}] listen() resolved`)
