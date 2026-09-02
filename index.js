@@ -148,15 +148,47 @@ class HolesailClient extends ReadyResource {
 
     if (process.env.HOLESAIL_DEBUG_PROBE) {
       const hash = require('hypercore-crypto').hash
-      console.error('[debug] dht.ready() resolved. table size =', dht.table.toArray().length)
+      const nodes = dht.table.toArray()
+      console.error('[debug] dht.ready() resolved. table size =', nodes.length)
+      for (const node of nodes) {
+        const t0 = Date.now()
+        try {
+          const pong = await dht.ping({ host: node.host, port: node.port })
+          console.error(
+            '[debug] ping',
+            node.host + ':' + node.port,
+            'ok in',
+            Date.now() - t0,
+            'ms',
+            JSON.stringify(pong)
+          )
+        } catch (err) {
+          console.error(
+            '[debug] ping',
+            node.host + ':' + node.port,
+            'FAILED in',
+            Date.now() - t0,
+            'ms',
+            err && err.message
+          )
+        }
+      }
       try {
         const target = hash(publicKey)
+        const t0 = Date.now()
         let n = 0
-        for await (const data of dht.findPeer(target, { hash: false, retries: 10 })) {
+        const q = dht.findPeer(target, { hash: false, retries: 10 })
+        q.on('error', (err) => console.error('[debug] findPeer stream error', err && err.message))
+        for await (const data of q) {
           n++
           console.error('[debug] findPeer data #' + n, JSON.stringify(data && data.from))
         }
-        console.error('[debug] findPeer finished, total candidates =', n)
+        console.error(
+          '[debug] findPeer finished in',
+          Date.now() - t0,
+          'ms, total candidates =',
+          n
+        )
       } catch (err) {
         console.error('[debug] findPeer threw', err && err.message)
       }
