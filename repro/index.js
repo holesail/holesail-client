@@ -9,7 +9,7 @@ const HyperDHT = require('hyperdht')
 const testnet = require('hyperdht/testnet.js')
 
 async function main() {
-  const swarm = await testnet(3)
+  const swarm = await testnet(30)
 
   const server = new HyperDHT({ bootstrap: swarm.bootstrap, firewalled: false })
   await server.ready()
