@@ -1,24 +1,34 @@
 'use strict'
-// Minimal repro: a HyperDHT node constructed with `firewalled: false` (the
-// usual way to mark a directly-reachable server) times out pinging a live,
-// reachable peer on some Windows environments. No holesail code involved.
+// Minimal repro: a client connecting to a HyperDHT server that announced
+// itself with `firewalled: false` (the usual way to mark a directly-
+// reachable server) gets PEER_NOT_FOUND on some Windows environments, even
+// though the server is up and the client can talk to the swarm fine. No
+// holesail code involved.
 
 const HyperDHT = require('hyperdht')
 const testnet = require('hyperdht/testnet.js')
 
 async function main() {
-  const swarm = await testnet(1)
-  const { port } = swarm.nodes[0].address()
+  const swarm = await testnet(3)
 
-  const dht = new HyperDHT({ bootstrap: swarm.bootstrap, firewalled: false })
-  await dht.ready()
+  const server = new HyperDHT({ bootstrap: swarm.bootstrap, firewalled: false })
+  await server.ready()
+  const keyPair = HyperDHT.keyPair()
+  await server.createServer(() => {}).listen(keyPair)
 
-  console.log(`pinging 127.0.0.1:${port}...`)
-  const t0 = Date.now()
-  await dht.ping({ host: '127.0.0.1', port })
-  console.log(`ok (${Date.now() - t0}ms)`)
+  const client = new HyperDHT({ bootstrap: swarm.bootstrap })
+  await client.ready()
 
-  await dht.destroy()
+  console.log('connecting...')
+  const socket = client.connect(keyPair.publicKey)
+  await new Promise((resolve, reject) => {
+    socket.once('connect', resolve)
+    socket.once('error', reject)
+  })
+  console.log('connected')
+
+  await server.destroy()
+  await client.destroy()
   await swarm.destroy()
 }
 
