@@ -36,3 +36,6 @@ jobs:
       - run: node raw-hyperdht-server-ping.js
         if: always()
         working-directory: repro
+      - run: node raw-hyperdht-inbound-ping.js
+        if: always()
+        working-directory: repro
