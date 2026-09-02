@@ -2,14 +2,12 @@
   "name": "hyperdht-firewalled-repro",
   "private": true,
   "version": "1.0.0",
-  "description": "Minimal repro: a firewalled:false HyperDHT node times out pinging a live, reachable peer on some Windows environments.",
+  "description": "Minimal repro: a client connecting to a firewalled:false HyperDHT server intermittently gets PEER_NOT_FOUND on Windows. Repeats the scenario and reports a failure rate.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "dht-rpc": "^6.27.0",
-    "hyperdht": "^6.33.2",
-    "udx-native": "^1.21.1"
+    "hyperdht": "^6.33.2"
   }
 }
