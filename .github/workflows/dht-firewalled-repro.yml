@@ -1,0 +1,21 @@
+name: hyperdht firewalled:false repro
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  repro:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js lts/*
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+      - run: npm install
+        working-directory: repro
+      - run: node index.js
+        working-directory: repro

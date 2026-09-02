@@ -1,0 +1,13 @@
+{
+  "name": "hyperdht-firewalled-repro",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Minimal repro: a client connecting to a firewalled:false HyperDHT server intermittently gets PEER_NOT_FOUND on Windows. Repeats the scenario and reports a failure rate.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "hyperdht": "^6.33.2"
+  }
+}
