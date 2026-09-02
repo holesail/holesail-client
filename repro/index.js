@@ -1,23 +1,15 @@
 'use strict'
-// Minimal repro, now narrowed to the exact suspected line:
-// hyperdht/lib/connect.js hardcodes `retries: 3` for the findPeer() lookup
-// it does internally before connecting:
+// Previous version compared retries:3 vs dht-rpc's default (5) back to back
+// on the SAME client - both came back "NOT FOUND" in <2ms every time, which
+// falsifies the retries-budget theory (a real network round-trip consuming
+// retry budget wouldn't resolve in 1ms) and also means the two queries
+// weren't properly isolated (state from the first could affect the second).
 //
-//   c.query = c.dht.findPeer(c.target, {
-//     hash: false, session: c.session, nodes: relayAddresses, retries: 3
-//   })
-//
-// dht-rpc's own default for a non-internal query is retries: 5 (see
-// dht-rpc/lib/query.js), and its retry timer is a fixed ~1000ms per cycle
-// (dht-rpc/lib/io.js), so retries: 3 buys ~4s of budget vs ~6s for retries:
-// 5+. Every DHT bootstrap/query we've seen on this Windows environment
-// consistently takes ~5-6s for a first successful exchange (vs sub-100ms on
-// Linux/macOS) - not random jitter, a consistent platform cost. If that's
-// right, a plain findPeer with retries: 3 should reliably fail here, and the
-// exact same query with a higher retries value should reliably succeed.
-//
-// No holesail code, no full connect()/holepunch - just the one query
-// hyperdht issues internally, with the two retry values compared directly.
+// This uses two entirely separate, freshly bootstrapped clients - one per
+// retries value - and queries with a raw (non-filtering) map so every reply
+// is visible, not just ones with a value. That distinguishes "zero replies
+// at all" (nothing to query, or requests never got answered) from "got
+// replies, none had the value" (found candidates, record just isn't there).
 
 const HyperDHT = require('hyperdht')
 const testnet = require('hyperdht/testnet.js')
@@ -26,19 +18,36 @@ const { COMMANDS } = require('hyperdht/lib/constants')
 
 const ITERATIONS = Number(process.env.REPRO_ITERATIONS) || 5
 
-async function findPeer(client, target, retries) {
+async function rawFindPeer(bootstrap, target, retries) {
+  const client = new HyperDHT({ bootstrap, port: 0, host: '127.0.0.1' })
+  await client.ready()
+
   const t0 = Date.now()
-  let found = false
-  const q = client.findPeer(target, { hash: false, retries })
-  for await (const data of q) {
-    if (data) found = true
+  let replies = 0
+  let withValue = 0
+
+  const q = client.query(
+    { target, command: COMMANDS.FIND_PEER, value: null },
+    {
+      retries,
+      map: (node) => {
+        replies++
+        if (node.value) withValue++
+        return node
+      }
+    }
+  )
+  for await (const _ of q) {
+    // draining is enough - counting happens in map()
   }
-  return { found, ms: Date.now() - t0 }
+
+  await client.destroy()
+  return { replies, withValue, ms: Date.now() - t0 }
 }
 
 async function attempt(i) {
   const swarm = await testnet(3)
-  let server, client
+  let server
 
   try {
     server = new HyperDHT({ bootstrap: swarm.bootstrap, firewalled: false })
@@ -47,40 +56,26 @@ async function attempt(i) {
     await server.createServer(() => {}).listen(keyPair)
     const target = hash(keyPair.publicKey)
 
-    client = new HyperDHT({ bootstrap: swarm.bootstrap })
-    await client.ready()
-
-    const withThree = await findPeer(client, target, 3)
+    const three = await rawFindPeer(swarm.bootstrap, target, 3)
     console.log(
-      `[${i}] retries:3  -> ${withThree.found ? 'found' : 'NOT FOUND'} (${withThree.ms}ms)`
+      `[${i}] retries:3       -> ${three.replies} replies, ${three.withValue} with value (${three.ms}ms)`
     )
 
-    const withDefault = await findPeer(client, target, undefined)
+    const dflt = await rawFindPeer(swarm.bootstrap, target, undefined)
     console.log(
-      `[${i}] retries:default(5) -> ${withDefault.found ? 'found' : 'NOT FOUND'} (${withDefault.ms}ms)`
+      `[${i}] retries:default -> ${dflt.replies} replies, ${dflt.withValue} with value (${dflt.ms}ms)`
     )
-
-    return withThree.found === false && withDefault.found === true
   } finally {
-    await Promise.all(
-      [server && server.destroy(), client && client.destroy(), swarm.destroy()].filter(Boolean)
-    )
+    await Promise.all([server && server.destroy(), swarm.destroy()].filter(Boolean))
   }
 }
 
 async function main() {
   console.log(`COMMANDS.FIND_PEER = ${COMMANDS.FIND_PEER} (sanity check, unused otherwise)\n`)
 
-  let confirmed = 0
-
   for (let i = 1; i <= ITERATIONS; i++) {
-    if (await attempt(i)) confirmed++
+    await attempt(i)
   }
-
-  console.log(`\n--- summary ---`)
-  console.log(
-    `${confirmed}/${ITERATIONS} runs confirm: retries:3 fails where retries:default succeeds`
-  )
 }
 
 main().catch((err) => {
