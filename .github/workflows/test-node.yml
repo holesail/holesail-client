@@ -29,3 +29,5 @@ jobs:
         run: Set-MpPreference -DisableRealtimeMonitoring $true
       - run: npm install
       - run: npm run test
+        env:
+          HOLESAIL_DEBUG_PROBE: 1

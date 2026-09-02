@@ -146,6 +146,22 @@ class HolesailClient extends ReadyResource {
 
     await dht.ready()
 
+    if (process.env.HOLESAIL_DEBUG_PROBE) {
+      const hash = require('hypercore-crypto').hash
+      console.error('[debug] dht.ready() resolved. table size =', dht.table.toArray().length)
+      try {
+        const target = hash(publicKey)
+        let n = 0
+        for await (const data of dht.findPeer(target, { hash: false, retries: 10 })) {
+          n++
+          console.error('[debug] findPeer data #' + n, JSON.stringify(data && data.from))
+        }
+        console.error('[debug] findPeer finished, total candidates =', n)
+      } catch (err) {
+        console.error('[debug] findPeer threw', err && err.message)
+      }
+    }
+
     try {
       let lastErr
       for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
@@ -153,6 +169,15 @@ class HolesailClient extends ReadyResource {
           return await HolesailClient._probeOnce(dht, publicKey, capability)
         } catch (err) {
           lastErr = err
+          if (process.env.HOLESAIL_DEBUG_PROBE) {
+            console.error(
+              '[debug] attempt',
+              attempt,
+              'failed with',
+              err && err.code,
+              err && err.message
+            )
+          }
           // DHT lookups can transiently fail to locate a peer on slow/lossy
           // transports (e.g. observed on Windows CI runners) even though the
           // peer is up - retry a few times before giving up.
