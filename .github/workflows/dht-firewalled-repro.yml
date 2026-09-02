@@ -20,11 +20,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Disable Windows Firewall (diagnostic only)
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled False
       - run: npm install
         working-directory: repro
       - run: node index.js
+        working-directory: repro
+      - run: node raw-udx.js
+        if: always()
         working-directory: repro

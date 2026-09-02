@@ -8,6 +8,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "hyperdht": "^6.33.2"
+    "hyperdht": "^6.33.2",
+    "udx-native": "^1.21.1"
   }
 }
