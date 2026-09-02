@@ -12,16 +12,16 @@ const HolesailClient = require('../index.js')
 
 const { MODE_TUNNEL, MODE_PROBE } = proto
 
-async function createTestnet(t, size = 3) {
-  const net = await testnet(size, { teardown: t.teardown })
+async function createTestnet(t, size = 10) {
+  const swarm = await testnet(size, { teardown: t.teardown })
   // The default bootstrap list is just the single entry node - on slower/
   // lossier transports (observed on Windows CI runners), a client or server
   // can finish its own bootstrap having only discovered a subset of this
   // tiny swarm, and that subset isn't guaranteed to overlap with wherever a
   // record actually landed. Seeding every node as a bootstrap contact makes
   // that overlap far more likely regardless of platform timing.
-  net.bootstrap = net.nodes.map((node) => ({ host: '127.0.0.1', port: node.address().port }))
-  return net
+  swarm.bootstrap = swarm.nodes.map((node) => ({ host: '127.0.0.1', port: node.address().port }))
+  return swarm
 }
 
 async function startClient(t, testnet, remote, opts = {}) {
