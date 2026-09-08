@@ -79,7 +79,8 @@ test('ready() - explicit port/host are kept even when udp still needs probing', 
   const remote = await rawServer(t, testnet, {
     port: echo.address().port,
     host: '127.0.0.1',
-    udp: false
+    udp: false,
+    firewalled: true
   })
 
   const client = new HolesailClient({

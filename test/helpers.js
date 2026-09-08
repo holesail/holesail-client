@@ -79,7 +79,8 @@ function udpEchoServer(t) {
 
 async function rawServer(t, testnet, opts = {}) {
   const { capability, keyPair, invite } = generate(opts.seed)
-  const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled: false })
+  const firewalled = opts.firewalled || false
+  const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled })
 
   const stats = { probes: 0, tunnels: 0, rejected: 0 }
 
