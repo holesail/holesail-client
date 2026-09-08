@@ -12,7 +12,7 @@ const HolesailClient = require('../index.js')
 
 const { MODE_TUNNEL, MODE_PROBE } = proto
 
-async function createTestnet(t, size = 3) {
+async function createTestnet(t, size = 30) {
   return testnet(size, { teardown: t.teardown })
 }
 
@@ -79,7 +79,12 @@ function udpEchoServer(t) {
 
 async function rawServer(t, testnet, opts = {}) {
   const { capability, keyPair, invite } = generate(opts.seed)
-  const firewalled = opts.firewalled || false
+  // On Windows, HyperDHT's own reachability check (run when firewalled is
+  // not true) never resolves on an isolated local testnet, hanging any
+  // connect() indefinitely. Forcing firewalled:true works around that, but
+  // doing so on macOS/Linux instead triggers HOLEPUNCH_ABORTED - so the
+  // workaround is scoped to Windows only. Doesn't affect prod either way.
+  const firewalled = opts.firewalled ?? process.platform === 'win32'
   const dht = new HyperDHT({ bootstrap: testnet.bootstrap, firewalled })
 
   const stats = { probes: 0, tunnels: 0, rejected: 0 }

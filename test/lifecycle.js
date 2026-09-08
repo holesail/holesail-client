@@ -44,8 +44,6 @@ test('ready() - connects to a real server and listens locally with explicit port
   t.is(remote.stats.probes, 0, 'explicit port/host/udp skips probing entirely')
 })
 
-// TODO: Upstream bug on windows, discovery and debugging in progress
-// Sets firewalled to true, won't affect prod only for tests
 test('ready() - probes the server when port/host/udp are not supplied', async (t) => {
   const testnet = await createTestnet(t)
   const echo = await tcpEchoServer(t)
@@ -57,8 +55,7 @@ test('ready() - probes the server when port/host/udp are not supplied', async (t
   const remote = await rawServer(t, testnet, {
     port: echo.address().port,
     host: '127.0.0.1',
-    advertisedPort,
-    firewalled: true
+    advertisedPort
   })
 
   const client = new HolesailClient({
@@ -81,8 +78,7 @@ test('ready() - explicit port/host are kept even when udp still needs probing', 
   const remote = await rawServer(t, testnet, {
     port: echo.address().port,
     host: '127.0.0.1',
-    udp: false,
-    firewalled: true
+    udp: false
   })
 
   const client = new HolesailClient({
