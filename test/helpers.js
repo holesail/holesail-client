@@ -9,6 +9,7 @@ const libNet = require('@holesail/hyper-cmd-lib-net')
 const proto = require('@holesail/protocol')
 const { generate } = require('@holesail/invite')
 const HolesailClient = require('../index.js')
+const process = require('process')
 
 const { MODE_TUNNEL, MODE_PROBE } = proto
 
