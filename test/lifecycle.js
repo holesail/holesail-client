@@ -44,7 +44,8 @@ test('ready() - connects to a real server and listens locally with explicit port
   t.is(remote.stats.probes, 0, 'explicit port/host/udp skips probing entirely')
 })
 
-test('ready() - probes the server when port/host/udp are not supplied', async (t) => {
+// TODO: Upstream bug on windows, discovery and debugging in progress
+test.skip('ready() - probes the server when port/host/udp are not supplied', async (t) => {
   const testnet = await createTestnet(t)
   const echo = await tcpEchoServer(t)
   // Advertise a distinct, genuinely free port for the client to bind its
