@@ -175,11 +175,15 @@ test('close() - tears down the proxy and dht', async (t) => {
   })
   await client.ready()
 
+  let closed = false
+  client.on('close', () => (closed = true))
+
   await client.close()
 
   t.is(client.state, 'destroyed')
   t.is(client.proxy, null)
   t.ok(client.closed, 'ReadyResource marks the instance closed')
+  t.ok(closed, 'close event emitted')
 })
 
 test('seed determinism - same seed on the raw server always exercises the same invite', async (t) => {
