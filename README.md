@@ -109,9 +109,7 @@ Static helper. Connects to the server named by `invite` and asks it for its `{ p
 
 ## License
 
-Holesail Client is released under the [GPL-v3 License](https://www.gnu.org/licenses/gpl-3.0.en.html).
-
-For more details, see the [LICENSE](https://www.gnu.org/licenses/gpl-3.0.en.html) file.
+This project is licensed under the GNU AGPL v3 license - see the [LICENSE](LICENSE.txt) and [NOTICE](NOTICE) files.
 
 ---
 
