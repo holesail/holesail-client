@@ -1,8 +1,8 @@
 # Holesail Client
 
-[Join our Discord Support Server](https://discord.gg/TQVacE7Vnj)
+Connect to a [holesail-server](https://github.com/holesail/holesail-server) over HyperDHT - P2P reverse proxying, no signalling server required.
 
-Node.js and Bare client for connecting to a [holesail-server](https://github.com/holesail/holesail-server) over HyperDHT - P2P reverse proxying, no signalling server required.
+> ** V3 is still experimental and under heavy development. Expect breaking changes. Consider using V2 instead**
 
 ```
 npm install holesail-client
